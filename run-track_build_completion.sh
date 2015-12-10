@@ -13,10 +13,10 @@ set -o errexit
 # Treat unset variables as an error when substituting.
 set -o nounset
 
-# TODO: Load variables in a more modular way
-#echo "Sourcing unified environment variables"
-#. workers/static-config.sh
+# cd to the scripts current directory
+cd -P -- "$(dirname -- "$0")"
 
-echo "Now starting archiver.py ..."
+echo "Now starting track_build_completion.py ..."
 python -m track_build_completion > track_build_completion.log 2>&1 &
-echo "Archiver is started."
+echo "track_build_completion.py is running."
+echo "The log is available at '$(pwd)track_build_completion.log'"
