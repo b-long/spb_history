@@ -22,6 +22,7 @@ import threading
 import urllib
 from stompy import Stomp
 import mechanize
+import logging
 
 # Modules created by Bioconductor
 from bioconductor.communication import getOldStompConnection
