@@ -19,4 +19,4 @@ cd -P -- "$(dirname -- "$0")"
 echo "Now starting archiver.py ..."
 python -m archiver > archiver.log 2>&1 &
 echo "archiver.py is started."
-echo "The log is available at '$(pwd)archiver.log'"
+echo "The log is available at '$(pwd)/archiver.log'"

@@ -21,4 +21,4 @@ cd -P -- "$(dirname -- "$0")"
 echo "Now starting Django ..."
 python -m manage runserver 0.0.0.0:8000 >> django.log 2>&1 &
 echo "Django.py is running."
-echo "The log is available at '$(pwd)django.log'"
+echo "The log is available at '$(pwd)/django.log'"
