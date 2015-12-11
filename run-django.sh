@@ -9,14 +9,19 @@ err_handler() {
 
 trap 'err_handler $LINENO' ERR
 
+# cd to the scripts current directory
+cd -P -- "$(dirname -- "$0")"
+
+# As a workaround to https://github.com/pypa/virtualenv/issues/150 , we should 
+# enable the virtual environment before setting "nounset"
+echo "Enabling virtual environment"
+source env/bin/activate
+
 # Fail fast (err_handler above will be invoked)
 # Exit immediately if a command exits with a non-zero status.
 set -o errexit
 # Treat unset variables as an error when substituting.
 set -o nounset
-
-# cd to the scripts current directory
-cd -P -- "$(dirname -- "$0")"
 
 echo "Now starting Django ..."
 python -m manage runserver 0.0.0.0:8000 >> django.log 2>&1 &
