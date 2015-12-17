@@ -25,7 +25,7 @@ import mechanize
 import logging
 
 # Modules created by Bioconductor
-from bioconductor.communication import getOldStompConnection
+from bioconductor.config import BROKER
 from bioconductor.config import BUILD_NODES
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
@@ -33,7 +33,7 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)
                     level=logging.INFO)
 
 try:
-    stomp = getOldStompConnection()
+    stomp = Stomp(BROKER['host'], BROKER['port'])
 except:
     logging.error("Cannot connect to Stomp")
     raise
