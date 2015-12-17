@@ -254,8 +254,7 @@ class MyListener(stomp.ConnectionListener):
         try:
             received_obj = json.loads(body)
         except ValueError as e:
-            logging.error("!!!Received invalid JSON!!!")
-            logging.error("Invalid json was: %s" % body)
+            logging.error("Received invalid JSON: %s." % body)
             return
         
         handle_builder_event(received_obj)
@@ -271,7 +270,7 @@ try:
     logging.info("Connection established using new communication module")
     stomp.subscribe(destination=TOPICS['events'], id=uuid.uuid4().hex,
                     ack='client')
-    logging.info("Subscribed to destination %s" % TOPICS['jobs'])
+    logging.info("Subscribed to destination %s" % TOPICS['events'])
 except Exception as e:
     logging.error("main() Could not connect to ActiveMQ: %s." % e)
     raise

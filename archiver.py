@@ -3,11 +3,13 @@ import json
 import os
 import logging
 from datetime import datetime
-from stompy import Stomp
+import stomp
+import time
+import uuid
 from django.db import connection
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
-from bioconductor.communication import getOldStompConnection
+from bioconductor.communication import getNewStompConnection
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -28,15 +30,6 @@ from spb_history.viewhistory.models import Job
 from spb_history.viewhistory.models import Package
 from spb_history.viewhistory.models import Build
 from spb_history.viewhistory.models import Message
-try:
-    stomp = getOldStompConnection()
-except:
-    logging.error("Cannot connect to Stomp")
-    raise
-
-# do we want acks?
-stomp.subscribe({'destination': "/topic/buildjobs", 'ack': 'client'})
-stomp.subscribe({'destination': "/topic/builderevents", 'ack': 'client'})
 
 def parse_time(time_str):
     """ take a string like 'Tue Nov 29 2011 11:55:40 GMT-0800 (PST)'
@@ -256,43 +249,83 @@ def is_connection_usable():
         return True
 
 
-def callback(body, destination):
-    logging.info("callback() Received %r." % (body,))
-    received_obj = None
-    if not is_connection_usable():
-        logging.debug("callback() Closing connection.")
-        connection.close()
-    try:
-        logging.debug("callback() Parsing JSON.")
-        received_obj = json.loads(body)
-    except ValueError:
-        logging.error("callback() Received invalid JSON: %s." % body)
-        return
-    if ('job_id' in received_obj.keys()):
-        logging.debug("callback() Destination = %s.", destination)
-        if (destination == '/topic/buildjobs'):
-            handle_job_start(received_obj)
-        elif (destination == '/topic/builderevents'):
-            handle_builder_event(received_obj)
-        logging.debug("callback() Destination handled.")
-    else:
-        logging.warning("callback() Invalid json (no job_id key).")
+# TODO: Name the callback for it's functionality, not usage.  This
+# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
+# describe capability provided ?
+class MyListener(stomp.ConnectionListener):
+    def on_connecting(self, host_and_port):
+        logging.debug('on_connecting() %s %s.' % host_and_port)
+
+    def on_connected(self, headers, body):
+        logging.debug('on_connected() %s %s.' % (headers, body))
+
+    def on_disconnected(self):
+        logging.debug('on_disconnected().')
+
+    def on_heartbeat_timeout(self):
+        logging.debug('on_heartbeat_timeout().')
+
+    def on_before_message(self, headers, body):
+        logging.debug('on_before_message() %s %s.' % (headers, body))
+        return headers, body
+
+    def on_receipt(self, headers, body):
+        logging.debug('on_receipt() %s %s.' % (headers, body))
+
+    def on_send(self, frame):
+        logging.debug('on_send() %s %s %s.' %
+                      (frame.cmd, frame.headers, frame.body))
+
+    def on_heartbeat(self):
+        logging.debug('on_heartbeat().')
+
+    def on_error(self, headers, message):
+        logging.debug('on_error(): "%s".' % message)
+
+    def on_message(self, headers, body):
+        destination = headers.get('destination')
+        logging.info("Received stomp message on destination {dst} with body: {message}".format(dst = destination, message=body))
+        received_obj = None
+        if not is_connection_usable():
+            logging.debug("callback() Closing connection.")
+            connection.close()
+        try:
+            logging.debug("callback() Parsing JSON.")
+            received_obj = json.loads(body)
+        except ValueError as e:
+            logging.error("Received invalid JSON: %s." % body)
+            return
+        
+        if ('job_id' in received_obj.keys()):
+            logging.debug("callback() Destination = %s.", destination)
+            if (destination == '/topic/buildjobs'):
+                handle_job_start(received_obj)
+            elif (destination == '/topic/builderevents'):
+                handle_builder_event(received_obj)
+            logging.debug("callback() Destination handled.")
+        else:
+            logging.warning("callback() Invalid json (no job_id key).")
+        
+        # Acknowledge that the message has been processed
+        self.message_received = True
+
 
 logging.info("main() Waiting for messages.")
 
+try:
+    logging.debug("Attempting to connect using new communication module")
+    stomp = getNewStompConnection('', MyListener())
+    logging.info("Connection established using new communication module")
+    stomp.subscribe(destination="/topic/buildjobs", id=uuid.uuid4().hex, ack='client')
+    logging.info("Subscribed to  %s" % "/topic/buildjobs")
+    stomp.subscribe(destination="/topic/builderevents", id=uuid.uuid4().hex, ack='client')
+    logging.info("Subscribed to  %s" % "/topic/builderevents")
+except:
+    logging.error("Cannot connect to Stomp")
+    raise
+
 while True:
-    try:
-        logging.debug("main() Begin while(True) loop.")
-        frame = stomp.receive_frame()
-        stomp.ack(frame) # do this?
-        logging.debug("main() Frame acknowledged.")
-        callback(frame.body, frame.headers.get('destination'))
-        logging.debug("main() Callback finished.")
-    except KeyboardInterrupt:
-        logging.info("main() KeyboardInterrupt.")
-        stomp.disconnect()
-        break
-    except:
-        continue
+        logging.debug("main() Begin while(True) loop.  Waiting to do work ... ")
+        time.sleep(15)
 
 logging.info("Done.")
