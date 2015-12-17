@@ -20,25 +20,19 @@ import requests
 import cookielib
 import threading
 import urllib
-from stompy import Stomp
+import stomp
+import uuid
 import mechanize
 import logging
 
 # Modules created by Bioconductor
-from bioconductor.config import BROKER
+from bioconductor.communication import getNewStompConnection
 from bioconductor.config import BUILD_NODES
+from bioconductor.config import TOPICS
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
-
-try:
-    stomp = Stomp(BROKER['host'], BROKER['port'])
-except:
-    logging.error("Cannot connect to Stomp")
-    raise
-
-stomp.subscribe({'destination': "/topic/builderevents", 'ack': 'client'})
 
 global tracker_base_url
 global build_counter
@@ -220,33 +214,73 @@ def filter_html(html):
     return("\n".join(good_lines))
 
 
-def callback(body, destination):
-    print " [x] Received %r" % (body,)
-    sys.stdout.flush() ## make sure we see everything
-    received_obj = None
-    try:
-        received_obj = json.loads(body)
-    except ValueError as e:
-        print("!!!Received invalid JSON!!!")
-        print("Invalid json was: %s" % body)
-        return
-    handle_builder_event(received_obj)
-    print("Destination: %s" % destination)
-    sys.stdout.flush()
 
+# TODO: Name the callback for it's functionality, not usage.  This
+# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
+# describe capability provided ?
+class MyListener(stomp.ConnectionListener):
+    def on_connecting(self, host_and_port):
+        logging.debug('on_connecting() %s %s.' % host_and_port)
+
+    def on_connected(self, headers, body):
+        logging.debug('on_connected() %s %s.' % (headers, body))
+
+    def on_disconnected(self):
+        logging.debug('on_disconnected().')
+
+    def on_heartbeat_timeout(self):
+        logging.debug('on_heartbeat_timeout().')
+
+    def on_before_message(self, headers, body):
+        logging.debug('on_before_message() %s %s.' % (headers, body))
+        return headers, body
+
+    def on_receipt(self, headers, body):
+        logging.debug('on_receipt() %s %s.' % (headers, body))
+
+    def on_send(self, frame):
+        logging.debug('on_send() %s %s %s.' %
+                      (frame.cmd, frame.headers, frame.body))
+
+    def on_heartbeat(self):
+        logging.debug('on_heartbeat().')
+
+    def on_error(self, headers, message):
+        logging.debug('on_error(): "%s".' % message)
+
+    def on_message(self, headers, body):
+        logging.info("Received stomp message: {message}".format(message=body))
+        received_obj = None
+        try:
+            received_obj = json.loads(body)
+        except ValueError as e:
+            logging.error("!!!Received invalid JSON!!!")
+            logging.error("Invalid json was: %s" % body)
+            return
+        
+        handle_builder_event(received_obj)
+        logging.info("Destination: %s" % headers.get('destination'))
+        
+        # Acknowledge that the message has been processed
+        self.message_received = True
+
+
+try:
+    logging.debug("Attempting to connect using new communication module")
+    stomp = getNewStompConnection('', MyListener())
+    logging.info("Connection established using new communication module")
+    stomp.subscribe(destination=TOPICS['events'], id=uuid.uuid4().hex,
+                    ack='client')
+    logging.info("Subscribed to destination %s" % TOPICS['jobs'])
+except Exception as e:
+    logging.error("main() Could not connect to ActiveMQ: %s." % e)
+    raise
 
 def main_loop():
     print("Waiting for messages...")
     while True:
-        try:
-            frame = stomp.receive_frame()
-            stomp.ack(frame) # do this?
-            callback(frame.body, frame.headers.get('destination'))
-        except KeyboardInterrupt:
-            stomp.disconnect()
-            break
-
-
+        logging.debug("Waiting to do work ... ")
+        time.sleep(15)
 
 if __name__ == "__main__":
     main_loop()
