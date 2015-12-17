@@ -279,7 +279,7 @@ def main_loop():
     print("Waiting for messages...")
     while True:
         logging.debug("Waiting to do work ... ")
-        time.sleep(15)
+        time.sleep(60*5)
 
 if __name__ == "__main__":
     main_loop()

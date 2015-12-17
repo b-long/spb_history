@@ -326,6 +326,6 @@ except:
 
 while True:
         logging.debug("main() Begin while(True) loop.  Waiting to do work ... ")
-        time.sleep(15)
+        time.sleep(60*5)
 
 logging.info("Done.")
