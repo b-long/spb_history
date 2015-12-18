@@ -14,11 +14,7 @@ import time
 import tempfile
 import os
 import subprocess
-import platform
-import ConfigParser
 import requests
-import cookielib
-import threading
 import urllib
 import stomp
 import uuid
