@@ -13,7 +13,7 @@ from bioconductor.communication import getNewStompConnection
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 # set up django environment
 path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -41,11 +41,16 @@ def handle_job_start(obj):
     pkg = obj['job_id'].split("_")[0]
     pkg = pkg.strip()
     try:
+        logging.info("Checking if package exists")
         existing_pkg = Package.objects.get(name=pkg)
+        logging.info("Package already exists")
     except Package.DoesNotExist:
+        logging.info("Package did not exist, saving to database")
         existing_pkg = Package(name=pkg)
         existing_pkg.save()
+        logging.info("Package saved to database")
 
+    logging.info("Saving job to databse")
     j = Job(package=existing_pkg,
       job_id=obj['job_id'],
       time_started=parse_time(obj['time']),
@@ -55,6 +60,7 @@ def handle_job_start(obj):
       bioc_version=obj['bioc_version'],
       r_version=BIOC_R_MAP[obj['bioc_version']])
     j.save()
+    logging.info("Job saved to database")
 
 def handle_dcf_info(obj, build):
     build.maintainer = obj['maintainer']
@@ -152,7 +158,9 @@ def handle_builder_event(obj):
     if (obj.has_key('job_id')):
         job_id = obj['job_id']
         try:
+            logging.info("Checking if job exists")
             parent_job = Job.objects.get(job_id=job_id)
+            logging.info("Job already exists")
         except Job.DoesNotExist:
             logging.warning("No parent job for %s; ignoring message." % job_id)
             return()
@@ -283,28 +291,29 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
-        logging.info("Received stomp message on destination {dst} with body: {message}".format(dst = destination, message=body))
+        logging.info("Message is intended for destination: {dst}".format(dst = destination))
         received_obj = None
         if not is_connection_usable():
-            logging.debug("callback() Closing connection.")
+            logging.info("on_message() Closing connection.")
             connection.close()
         try:
-            logging.debug("callback() Parsing JSON.")
+            logging.debug("on_message() Parsing JSON.")
             received_obj = json.loads(body)
+            logging.info("on_message() Successfully parsed JSON")
         except ValueError as e:
-            logging.error("Received invalid JSON: %s." % body)
+            logging.error("on_message() JSON is invalid: %s." % body)
             return
         
         if ('job_id' in received_obj.keys()):
-            logging.debug("callback() Destination = %s.", destination)
             if (destination == '/topic/buildjobs'):
                 handle_job_start(received_obj)
             elif (destination == '/topic/builderevents'):
                 handle_builder_event(received_obj)
-            logging.debug("callback() Destination handled.")
+            logging.info("on_message() Destination handled.")
         else:
-            logging.warning("callback() Invalid json (no job_id key).")
+            logging.warning("on_message() Invalid json (no job_id key).")
         
         # Acknowledge that the message has been processed
         self.message_received = True
