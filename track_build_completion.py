@@ -29,6 +29,7 @@ import logging
 from bioconductor.communication import getNewStompConnection
 from bioconductor.config import BUILD_NODES
 from bioconductor.config import TOPICS
+from bioconductor.config import ENVIR
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -159,10 +160,8 @@ def copy_report_to_site(html, tarball_name):
 def post_to_tracker(roundup_issue, tarball_name, \
   html, post_text):
     global tracker_base_url
-    config = ConfigParser.ConfigParser()
-    config.read('/home/biocadmin/packagebuilder/spb_history/tracker.ini')
-    username = config.get("tracker", "username")
-    password = config.get("tracker", "password")
+    username = ENVIR['tracker_user']
+    password = ENVIR['tracker_pass']
     url = tracker_base_url
 
     br = mechanize.Browser()
@@ -179,25 +178,6 @@ def post_to_tracker(roundup_issue, tarball_name, \
     #br['@action'] = 'edit'
     br['@note'] = post_text
     res2 = br.submit()
-
-
-
-
-
-    # jar = cookielib.CookieJar()
-    # params = {"__login_name": username, "__login_password": password,\
-    #   "@action": "login", "__came_from": \
-    #   tracker_base_url}
-    # session = requests.session()
-    # session.max_redirects = 50
-
-    # r = session.get(url, params=params, cookies=jar, verify=False,
-    #     allow_redirects=True)
-    # url2 = url + "/issue%s" % roundup_issue
-    # params2 = {"@action": "edit", "@note": post_text}
-    # r2 = session.get(url2, params=params2, cookies=jar, verify=False)
-    
-
 
 def filter_html(html):
     lines = html.split("\n")
