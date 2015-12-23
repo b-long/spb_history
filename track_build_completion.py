@@ -251,12 +251,5 @@ except Exception as e:
     logging.error("main() Could not connect to ActiveMQ: %s." % e)
     raise
 
-def main_loop():
-    print("Waiting for messages...")
-    while True:
-        logging.debug("Waiting to do work ... ")
-        time.sleep(60*5)
-
-if __name__ == "__main__":
-    main_loop()
-#else:
+logging.info("Waiting to do work ... ")
+time.sleep(30)

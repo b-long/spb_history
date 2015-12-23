@@ -333,8 +333,4 @@ except:
     logging.error("Cannot connect to Stomp")
     raise
 
-while True:
-        logging.debug("main() Begin while(True) loop.  Waiting to do work ... ")
-        time.sleep(60*5)
-
-logging.info("Done.")
+time.sleep(30)
