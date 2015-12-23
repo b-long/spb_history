@@ -219,7 +219,7 @@ class MyListener(stomp.ConnectionListener):
                       (frame.cmd, frame.headers, frame.body))
 
     def on_heartbeat(self):
-        logging.debug('on_heartbeat().')
+        logging.info('on_heartbeat(): Waiting to do work.')
 
     def on_error(self, headers, message):
         logging.debug('on_error(): "%s".' % message)
