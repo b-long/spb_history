@@ -42,14 +42,14 @@ def handle_builder_event(obj):
         and 'status' in obj and obj['status'] == 'autoexit'):
         builder_id = obj['builder_id']
         job_id = obj['job_id']
-        print("Looks like the build is complete on node %s" % \
+        logging.info("Looks like the build is complete on node %s" % \
           builder_id)
         if (not job_id in build_counter):
             build_counter[job_id] = 1
         else:
             build_counter[job_id] += 1
         if (build_counter[job_id] == len(BUILD_NODES)):
-            print("We have enough finished builds to send a report.")
+            logging.info("We have enough finished builds to send a report.")
             handle_completed_build(obj)
 
 def handle_completed_build(obj):
@@ -68,19 +68,19 @@ def handle_completed_build(obj):
     f = urllib.urlopen("http://staging.bioconductor.org:8000/jid/%s" % obj['job_id'])
     job_id = f.read().strip()
     if job_id == "0":
-        print("There is no build report for this job!")
+        logging.info("There is no build report for this job!")
         return
     url = "http://staging.bioconductor.org:8000/job/%s/" % job_id
-    print("build report url: %s\n" %url)
+    logging.info("build report url: %s\n" %url)
     sys.stdout.flush()
-    print("Sleeping for 30 seconds...\n")
+    logging.info("Sleeping for 30 seconds...\n")
     time.sleep(30)
 
     response = requests.get(url)
     html = response.text.encode('ascii', 'ignore')
-    #print("html before filtering: %s\n" % html)
+    #logging.info("html before filtering: %s\n" % html)
     html = filter_html(html)
-    #print("html after filtering: %s\n" % html)
+    #logging.info("html after filtering: %s\n" % html)
 
     f = urllib.urlopen("http://staging.bioconductor.org:8000/overall_build_status/%s"\
         % job_id)
@@ -89,7 +89,7 @@ def handle_completed_build(obj):
     post_text = get_post_text(result, url)
     status  = post_to_tracker(roundup_issue, tarball_name, html, \
         post_text)
-    print("Done.\n")
+    logging.info("Done.\n")
     sys.stdout.flush()
 
 def get_post_text(build_result, url):
@@ -128,10 +128,10 @@ Please see the following build report for more details:
 
 
 def copy_report_to_site(html, tarball_name):
-    #print("HTML=\n\n%s\n\n" % html)
+    #logging.info("HTML=\n\n%s\n\n" % html)
     t = tempfile.mkstemp()
     f = open(t[1], "w")
-    #print("temp filename is %s" % t[1])
+    #logging.info("temp filename is %s" % t[1])
     f.write(html)
     f.flush()
     f.close
@@ -143,10 +143,10 @@ def copy_report_to_site(html, tarball_name):
     cmd = \
       "/usr/bin/scp -i /home/biocadmin/.ssh/pkgbuild_rsa %s webadmin@master.bioconductor.org:/extra/www/bioc/spb_reports/%s" % \
       (t[1], destfile)
-    print("cmd = %s\n" % cmd)
+    logging.info("cmd = %s\n" % cmd)
     result = subprocess.call(cmd, shell=True)
     chmod_cmd = "/usr/bin/ssh -i /home/biocadmin/.ssh/pkgbuild_rsa webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
-    print("chmod_cmd = %s\n" % chmod_cmd)
+    logging.info("chmod_cmd = %s\n" % chmod_cmd)
     result = subprocess.call(chmod_cmd, shell=True)
     os.remove(t[1])
     url = "http://bioconductor.org/spb_reports/%s" % destfile
@@ -160,12 +160,15 @@ def post_to_tracker(roundup_issue, tarball_name, \
     password = ENVIR['tracker_pass']
     url = tracker_base_url
 
+    logging.info("Attempting to post to tracker at url: '{url}'".format(url = url))
+    
     br = mechanize.Browser()
     br.open(url)
     br.select_form(nr=2)
     br["__login_name"] = username
     br["__login_password"] = password
     res = br.submit()
+    logging.info("Login to tracker result: '{res}'".format(res = res))
 
     url2 = url + "/issue%s" % roundup_issue
 
@@ -174,6 +177,7 @@ def post_to_tracker(roundup_issue, tarball_name, \
     #br['@action'] = 'edit'
     br['@note'] = post_text
     res2 = br.submit()
+    logging.info("Post to tracker result: '{res}'".format(res = res2))
 
 def filter_html(html):
     lines = html.split("\n")
