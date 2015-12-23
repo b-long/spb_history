@@ -252,11 +252,9 @@ except Exception as e:
     raise
 
 def main_loop():
-    print("Waiting for messages...")
+    logging.info("Waiting to do work. ")
     while True:
-        logging.debug("Waiting to do work ... ")
-        time.sleep(60*5)
+        time.sleep(15)
 
 if __name__ == "__main__":
     main_loop()
-#else:
