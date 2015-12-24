@@ -1,4 +1,4 @@
-git+https://git@github.com/bioconductor/bioc-common-python.git
+git+https://git@github.com/bioconductor/bioc-common-python.git@0.6#bioconductor==bioconductor
 Django==1.8.4
 mechanize==0.2.5
 MySQL-python==1.2.5
