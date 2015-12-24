@@ -20,12 +20,10 @@ from bioconductor.config import BIOC_VERSION
 from bioconductor.communication import getNewStompConnection
 from bioconductor.config import TOPICS
 
-logging.basicConfig(format='%(levelname)s: %(asctime)s %(message)s',
-                    datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.DEBUG)
+logger = logging.getLogger()
 
 if (len(sys.argv) != 3):
-    logging.info("usage: %s <issue_id> <tracker_tarball_url>" % sys.argv[0])
+    logger.info("usage: %s <issue_id> <tracker_tarball_url>" % sys.argv[0])
     sys.exit(1)
 
 
@@ -34,37 +32,37 @@ if (len(sys.argv) != 3):
 # describe capability provided ?
 class MyListener(stomp.ConnectionListener):
     def on_connecting(self, host_and_port):
-        logging.debug('on_connecting() %s %s.' % host_and_port)
+        logger.debug('on_connecting() %s %s.' % host_and_port)
 
     def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
+        logger.debug('on_connected() %s %s.' % (headers, body))
 
     def on_disconnected(self):
-        logging.debug('on_disconnected().')
+        logger.debug('on_disconnected().')
 
     def on_heartbeat_timeout(self):
-        logging.debug('on_heartbeat_timeout().')
+        logger.debug('on_heartbeat_timeout().')
 
     def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
+        logger.debug('on_before_message() %s %s.' % (headers, body))
         return headers, body
 
     def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
+        logger.debug('on_receipt() %s %s.' % (headers, body))
 
     def on_send(self, frame):
-        logging.debug('on_send() %s %s %s.' %
+        logger.debug('on_send() %s %s %s.' %
                       (frame.cmd, frame.headers, frame.body))
-        logging.info("Receipt: %s" % frame.headers.get('receipt-id'))
+        logger.info("Receipt: %s" % frame.headers.get('receipt-id'))
 
     def on_heartbeat(self):
-        logging.debug('on_heartbeat().')
+        logger.debug('on_heartbeat().')
 
     def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
+        logger.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
-        logging.debug('on_message(): "%s".' % body)
+        logger.debug('on_message(): "%s".' % body)
         self.message_received = True
 
 pacific = timezone("US/Pacific")
@@ -96,12 +94,12 @@ obj['time'] = timestamp2
 obj['client_id'] = "single_package_builder_autobuild:%s:%s" % (issue_id, pkgname)
 
 json = json.dumps(obj)
-logging.debug("Received JSON object: '%s'", json)
+logger.debug("Received JSON object: '%s'", json)
 
 try:
     stomp = getNewStompConnection('', MyListener())
 except:
-    logging.info("Cannot connect")
+    logger.info("Cannot connect")
     raise
 
 this_frame = stomp.send(TOPICS['jobs'], json)

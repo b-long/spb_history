@@ -19,10 +19,10 @@ cd -P -- "$(dirname -- $0)" || $(echo "Error finding run directory." && exit 1)
 dir=$(dirname -- "$0")
 # Default executing user (this feature not used)
 user=""
-name=$(basename "$0")
+name="track_build_completion"
 
 # Basic command representing this service
-cmd="python -m track_build_completion"
+cmd="python -m $name"
 # As a workaround to https://github.com/pypa/virtualenv/issues/150 , we should 
 # activate the virtual environment before setting "nounset"
 
@@ -107,7 +107,7 @@ case "$1" in
             fi
         fi
     else
-        echo "Not running"
+        echo "$name is not running"
     fi
     ;;
     restart)
@@ -120,7 +120,7 @@ case "$1" in
     ;;
     status)
     if is_running; then
-        echo "Running"
+        echo "$name is running"
     else
         echo "$name is stopped."
         exit 1
