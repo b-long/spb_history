@@ -20,6 +20,7 @@ import stomp
 import uuid
 import mechanize
 import logging
+import threading
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
@@ -34,6 +35,21 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)
 global tracker_base_url
 global build_counter
 build_counter = {}
+
+def do_work(body):
+    logging.info("Received stomp message: {message}".format(message=body))
+    received_obj = None
+    try:
+        received_obj = json.loads(body)
+    except ValueError as e:
+        logging.error("Received invalid JSON: %s." % body)
+        return
+
+    handle_builder_event(received_obj)
+    logging.info("Destination: %s" % headers.get('destination'))
+        
+
+
 
 def handle_builder_event(obj):
     global build_counter
@@ -228,21 +244,13 @@ class MyListener(stomp.ConnectionListener):
     def on_error(self, headers, message):
         logging.debug('on_error(): "%s".' % message)
 
+
+
     def on_message(self, headers, body):
-        logging.info("Received stomp message: {message}".format(message=body))
-        received_obj = None
-        try:
-            received_obj = json.loads(body)
-        except ValueError as e:
-            logging.error("Received invalid JSON: %s." % body)
-            return
-        
-        handle_builder_event(received_obj)
-        logging.info("Destination: %s" % headers.get('destination'))
-        
         # Acknowledge that the message has been processed
         self.message_received = True
-
+        t = threading.Thread(target=do_work, args=(body,))
+        t.start()
 
 try:
     logging.debug("Attempting to connect using new communication module")
