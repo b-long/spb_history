@@ -12,13 +12,15 @@ import json
 import sys
 import datetime
 from pytz import timezone
-import stomp
 import logging
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
 from bioconductor.config import BIOC_VERSION
-from bioconductor.communication import getNewStompConnection
+from bioconductor.communication import MessageSender
 from bioconductor.config import TOPICS
+
+
+sender = MessageSender(TOPICS['jobs'])
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -29,43 +31,6 @@ if (len(sys.argv) != 3):
     sys.exit(1)
 
 
-# TODO: Name the callback for it's functionality, not usage.  This
-# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
-# describe capability provided ?
-class MyListener(stomp.ConnectionListener):
-    def on_connecting(self, host_and_port):
-        logging.debug('on_connecting() %s %s.' % host_and_port)
-
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
-
-    def on_disconnected(self):
-        logging.debug('on_disconnected().')
-
-    def on_heartbeat_timeout(self):
-        logging.debug('on_heartbeat_timeout().')
-
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
-
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
-
-    def on_send(self, frame):
-        logging.debug('on_send() %s %s %s.' %
-                      (frame.cmd, frame.headers, frame.body))
-        logging.info("Receipt: %s" % frame.headers.get('receipt-id'))
-
-    def on_heartbeat(self):
-        logging.debug('on_heartbeat().')
-
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
-
-    def on_message(self, headers, body):
-        logging.debug('on_message(): "%s".' % body)
-        self.message_received = True
 
 pacific = timezone("US/Pacific")
 now0 = datetime.datetime.now()
@@ -96,12 +61,7 @@ obj['time'] = timestamp2
 obj['client_id'] = "single_package_builder_autobuild:%s:%s" % (issue_id, pkgname)
 
 json = json.dumps(obj)
-logging.debug("Received JSON object: '%s'", json)
+logging.debug("Sending JSON object: '%s'", json)
 
-try:
-    stomp = getNewStompConnection('', MyListener())
-except:
-    logging.info("Cannot connect")
-    raise
 
-this_frame = stomp.send(TOPICS['jobs'], json)
+sender.send(json)

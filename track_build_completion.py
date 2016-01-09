@@ -16,15 +16,15 @@ import os
 import subprocess
 import requests
 import urllib
-import stomp
 import uuid
 import mechanize
 import logging
 import threading
 
 # Modules created by Bioconductor
-from bioconductor.communication import getNewStompConnection
+from bioconductor.communication import QueueWatcher
 from bioconductor.config import BUILD_NODES
+
 from bioconductor.config import TOPICS
 from bioconductor.config import ENVIR
 
@@ -36,8 +36,8 @@ global tracker_base_url
 global build_counter
 build_counter = {}
 
-def do_work(body, headers):
-    logging.info("Received stomp message: {message}".format(message=body))
+def do_work(body):
+    logging.info("Received message: {message}".format(message=body))
     received_obj = None
     try:
         received_obj = json.loads(body)
@@ -46,7 +46,6 @@ def do_work(body, headers):
         return
 
     handle_builder_event(received_obj)
-    logging.info("Destination: %s" % headers.get('destination'))
         
 
 
@@ -210,63 +209,20 @@ def filter_html(html):
     return("\n".join(good_lines))
 
 
-
-# TODO: Name the callback for it's functionality, not usage.  This
-# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
-# describe capability provided ?
-class MyListener(stomp.ConnectionListener):
-    def on_connecting(self, host_and_port):
-        logging.debug('on_connecting() %s %s.' % host_and_port)
-
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
-
-    def on_disconnected(self):
-        logging.debug('on_disconnected().')
-
-    def on_heartbeat_timeout(self):
-        logging.debug('on_heartbeat_timeout().')
-
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
-
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
-
-    def on_send(self, frame):
-        logging.debug('on_send() %s %s %s.' %
-                      (frame.cmd, frame.headers, frame.body))
-
-    def on_heartbeat(self):
-        logging.info('on_heartbeat(): Waiting to do work.')
-
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
+def on_message(body):
+    do_work(body)
 
 
+watcher = QueueWatcher(TOPICS['events'])
 
-    def on_message(self, headers, body):
-        # Acknowledge that the message has been processed
-        self.message_received = True
-        t = threading.Thread(target=do_work, args=(body,headers,))
-        t.start()
-
-try:
-    logging.debug("Attempting to connect using new communication module")
-    stomp = getNewStompConnection('', MyListener())
-    logging.info("Connection established using new communication module")
-    stomp.subscribe(destination=TOPICS['events'], id=uuid.uuid4().hex,
-                    ack='client')
-    logging.info("Subscribed to destination %s" % TOPICS['events'])
-except Exception as e:
-    logging.error("main() Could not connect to ActiveMQ: %s." % e)
-    raise
 
 def main_loop():
     logging.info("Waiting to do work. ")
     while True:
-        time.sleep(15)
+        m = watcher.poll()
+        if m is not None:
+            on_message(m)
+        time.sleep(0.2)
 
 if __name__ == "__main__":
     main_loop()

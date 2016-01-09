@@ -3,13 +3,13 @@ import json
 import os
 import logging
 from datetime import datetime
-import stomp
 import time
 import uuid
 from django.db import connection
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
-from bioconductor.communication import getNewStompConnection
+from biocondutor.communication import QueueWatcher
+from bioconductor.config import TOPICS
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -256,85 +256,48 @@ def is_connection_usable():
     else:
         return True
 
+def on_message(destination, body):
+    logging.info("Received message with body: {message}".format(message=body))
+    destination = headers.get('destination')
+    logging.info("Message is intended for destination: {dst}".format(dst = destination))
+    received_obj = None
+    if not is_connection_usable():
+        logging.info("on_message() Closing connection.")
+        connection.close()
+    try:
+        logging.debug("on_message() Parsing JSON.")
+        received_obj = json.loads(body)
+        logging.info("on_message() Successfully parsed JSON")
+    except ValueError as e:
+        logging.error("on_message() JSON is invalid: %s." % body)
+        return
+    
+    if ('job_id' in received_obj.keys()):
+        if (destination == TOPICS['jobs']):
+            handle_job_start(received_obj)
+        elif (destination == TOPICS['events']):
+            handle_builder_event(received_obj)
+        logging.info("on_message() Destination handled.")
+    else:
+        logging.warning("on_message() Invalid json (no job_id key).")
+    
 
-# TODO: Name the callback for it's functionality, not usage.  This
-# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
-# describe capability provided ?
-class MyListener(stomp.ConnectionListener):
-    def on_connecting(self, host_and_port):
-        logging.debug('on_connecting() %s %s.' % host_and_port)
 
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
-
-    def on_disconnected(self):
-        logging.debug('on_disconnected().')
-
-    def on_heartbeat_timeout(self):
-        logging.debug('on_heartbeat_timeout().')
-
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
-
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
-
-    def on_send(self, frame):
-        logging.debug('on_send() %s %s %s.' %
-                      (frame.cmd, frame.headers, frame.body))
-
-    def on_heartbeat(self):
-        logging.info('on_heartbeat(): Waiting to do work.')
-
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
-
-    def on_message(self, headers, body):
-        logging.info("Received stomp message with body: {message}".format(message=body))
-        destination = headers.get('destination')
-        logging.info("Message is intended for destination: {dst}".format(dst = destination))
-        received_obj = None
-        if not is_connection_usable():
-            logging.info("on_message() Closing connection.")
-            connection.close()
-        try:
-            logging.debug("on_message() Parsing JSON.")
-            received_obj = json.loads(body)
-            logging.info("on_message() Successfully parsed JSON")
-        except ValueError as e:
-            logging.error("on_message() JSON is invalid: %s." % body)
-            return
-        
-        if ('job_id' in received_obj.keys()):
-            if (destination == '/topic/buildjobs'):
-                handle_job_start(received_obj)
-            elif (destination == '/topic/builderevents'):
-                handle_builder_event(received_obj)
-            logging.info("on_message() Destination handled.")
-        else:
-            logging.warning("on_message() Invalid json (no job_id key).")
-        
-        # Acknowledge that the message has been processed
-        self.message_received = True
 
 
 logging.info("main() Waiting for messages.")
 
-try:
-    logging.debug("Attempting to connect using new communication module")
-    stomp = getNewStompConnection('', MyListener())
-    logging.info("Connection established using new communication module")
-    stomp.subscribe(destination="/topic/buildjobs", id=uuid.uuid4().hex, ack='client')
-    logging.info("Subscribed to  %s" % "/topic/buildjobs")
-    stomp.subscribe(destination="/topic/builderevents", id=uuid.uuid4().hex, ack='client')
-    logging.info("Subscribed to  %s" % "/topic/builderevents")
-except:
-    logging.error("Cannot connect to Stomp")
-    raise
+events_watcher = QueueWatcher(TOPICS['events'])
+jobs_watcher = QueueWatcher(TOPICS['jobs'])
 
 logging.info("Waiting to do work. ")
 while True:
-        time.sleep(15)
+    events_msg = events_watcher.poll()
+    if events_msg is not None:
+        on_message(events_msg, TOPICS['events'])
+    jobs_msg = jobs_watcher.poll()
+    if jobs_msg is not None:
+        on_message(jobs_msg, TOPICS['jobs'])
+    time.sleep(0.2)
 
 logging.info("Done.")
