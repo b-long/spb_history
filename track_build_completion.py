@@ -36,7 +36,7 @@ global tracker_base_url
 global build_counter
 build_counter = {}
 
-def do_work(body):
+def do_work(body, headers):
     logging.info("Received stomp message: {message}".format(message=body))
     received_obj = None
     try:
@@ -249,7 +249,7 @@ class MyListener(stomp.ConnectionListener):
     def on_message(self, headers, body):
         # Acknowledge that the message has been processed
         self.message_received = True
-        t = threading.Thread(target=do_work, args=(body,))
+        t = threading.Thread(target=do_work, args=(body,headers,))
         t.start()
 
 try:
