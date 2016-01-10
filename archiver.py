@@ -280,8 +280,6 @@ def do_work(body, destination):
     else:
         logging.warning("on_message() Invalid json (no job_id key).")
     
-    # Acknowledge that the message has been processed
-    self.message_received = True
 
 
 
