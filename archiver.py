@@ -256,7 +256,7 @@ def is_connection_usable():
     else:
         return True
 
-def on_message(destination, body):
+def on_message(body, destination):
     logging.info("Received message with body: {message}".format(message=body))
     logging.info("Message is intended for destination: {dst}".format(dst = destination))
     received_obj = None
