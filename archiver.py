@@ -8,7 +8,7 @@ import uuid
 from django.db import connection
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
-from biocondutor.communication import QueueWatcher
+from bioconductor.communication import QueueWatcher
 from bioconductor.config import TOPICS
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
