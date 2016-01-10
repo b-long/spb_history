@@ -258,7 +258,6 @@ def is_connection_usable():
 
 def on_message(destination, body):
     logging.info("Received message with body: {message}".format(message=body))
-    destination = headers.get('destination')
     logging.info("Message is intended for destination: {dst}".format(dst = destination))
     received_obj = None
     if not is_connection_usable():
