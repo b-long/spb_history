@@ -7,6 +7,8 @@ import stomp
 import time
 import uuid
 from django.db import connection
+import threading
+
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
 from bioconductor.communication import getNewStompConnection
@@ -256,6 +258,32 @@ def is_connection_usable():
     else:
         return True
 
+def do_work(body):
+    received_obj = None
+    if not is_connection_usable():
+        logging.info("on_message() Closing connection.")
+        connection.close()
+    try:
+        logging.debug("on_message() Parsing JSON.")
+        received_obj = json.loads(body)
+        logging.info("on_message() Successfully parsed JSON")
+    except ValueError as e:
+        logging.error("on_message() JSON is invalid: %s." % body)
+        return
+    
+    if ('job_id' in received_obj.keys()):
+        if (destination == '/topic/buildjobs'):
+            handle_job_start(received_obj)
+        elif (destination == '/topic/builderevents'):
+            handle_builder_event(received_obj)
+        logging.info("on_message() Destination handled.")
+    else:
+        logging.warning("on_message() Invalid json (no job_id key).")
+    
+    # Acknowledge that the message has been processed
+    self.message_received = True
+
+
 
 # TODO: Name the callback for it's functionality, not usage.  This
 # seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
@@ -291,32 +319,14 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        # Acknowledge that the message has been processed
+        self.message_received = True
+
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
-        received_obj = None
-        if not is_connection_usable():
-            logging.info("on_message() Closing connection.")
-            connection.close()
-        try:
-            logging.debug("on_message() Parsing JSON.")
-            received_obj = json.loads(body)
-            logging.info("on_message() Successfully parsed JSON")
-        except ValueError as e:
-            logging.error("on_message() JSON is invalid: %s." % body)
-            return
-        
-        if ('job_id' in received_obj.keys()):
-            if (destination == '/topic/buildjobs'):
-                handle_job_start(received_obj)
-            elif (destination == '/topic/builderevents'):
-                handle_builder_event(received_obj)
-            logging.info("on_message() Destination handled.")
-        else:
-            logging.warning("on_message() Invalid json (no job_id key).")
-        
-        # Acknowledge that the message has been processed
-        self.message_received = True
+        t = threading.Thread(target=do_work, args=(body,))
+        t.start()
 
 
 logging.info("main() Waiting for messages.")
