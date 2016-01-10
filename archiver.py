@@ -258,7 +258,7 @@ def is_connection_usable():
     else:
         return True
 
-def do_work(body):
+def do_work(body, destination):
     received_obj = None
     if not is_connection_usable():
         logging.info("on_message() Closing connection.")
@@ -325,7 +325,7 @@ class MyListener(stomp.ConnectionListener):
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
-        t = threading.Thread(target=do_work, args=(body,))
+        t = threading.Thread(target=do_work, args=(body,destination,))
         t.start()
 
 
