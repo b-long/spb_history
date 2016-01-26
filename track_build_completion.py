@@ -30,6 +30,7 @@ from bioconductor.config import ENVIR
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
+logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 global tracker_base_url
 global build_counter
@@ -229,6 +230,11 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        # FIXME, don't hardcode keepalive topic name:
+        if headers['destination'] == '/topic/keepalive':
+            logging.debug('got keepalive message')
+            return()
+        
         logging.info("Received stomp message: {message}".format(message=body))
         received_obj = None
         try:
@@ -251,6 +257,9 @@ try:
     stomp.subscribe(destination=TOPICS['events'], id=uuid.uuid4().hex,
                     ack='client')
     logging.info("Subscribed to destination %s" % TOPICS['events'])
+    stomp.subscribe(destination="/topic/keepalive", id=uuid.uuid4().hex,
+                    ack='auto')
+    logging.info("Subscribed to  %s" % "/topic/keepalive")
 except Exception as e:
     logging.error("main() Could not connect to ActiveMQ: %s." % e)
     raise
