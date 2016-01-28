@@ -16,7 +16,7 @@ logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 class MyListener(ConnectionListener):
     def on_message(self, headers, message):
-        print(message)
+        logging.info(message)
 
 
 try:
