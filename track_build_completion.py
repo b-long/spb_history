@@ -14,12 +14,15 @@ import time
 import tempfile
 import os
 import subprocess
+import socket
 import requests
 import urllib
 import stomp
 import uuid
 import mechanize
 import logging
+
+from datetime import datetime
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
@@ -233,6 +236,12 @@ class MyListener(stomp.ConnectionListener):
         # FIXME, don't hardcode keepalive topic name:
         if headers['destination'] == '/topic/keepalive':
             logging.debug('got keepalive message')
+            response = {"host": socket.gethostname(),
+            "script": os.path.basename(__file__),
+            "timestamp": datetime.now().isoformat()}
+            stomp.send(body=json.dumps(response),
+                destination="/topic/keepalive_response")
+            
             return()
         
         logging.info("Received stomp message: {message}".format(message=body))

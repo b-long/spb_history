@@ -4,6 +4,7 @@ import os
 import logging
 from datetime import datetime
 import stomp
+import socket
 import time
 import uuid
 from django.db import connection
@@ -261,7 +262,7 @@ def is_connection_usable():
 # TODO: Name the callback for it's functionality, not usage.  This
 # seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
 # describe capability provided ?
-class MyListener(stomp.ConnectionListener):
+class   MyListener(stomp.ConnectionListener):
     def on_connecting(self, host_and_port):
         logging.debug('on_connecting() %s %s.' % host_and_port)
 
@@ -295,6 +296,11 @@ class MyListener(stomp.ConnectionListener):
         # FIXME, don't hardcode keepalive topic name:
         if headers['destination'] == '/topic/keepalive':
             logging.debug('got keepalive message')
+            response = {"host": socket.gethostname(),
+            "script": os.path.basename(__file__),
+            "timestamp": datetime.now().isoformat()}
+            stomp.send(body=json.dumps(response),
+                destination="/topic/keepalive_response")
             return()
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
@@ -325,6 +331,7 @@ class MyListener(stomp.ConnectionListener):
 
 
 logging.info("main() Waiting for messages.")
+
 
 try:
     logging.debug("Attempting to connect using new communication module")
