@@ -244,6 +244,14 @@ class MyListener(stomp.ConnectionListener):
             
             return()
         
+        debug_msg = {"script": os.path.basename(__file__),
+            "host": socket.gethostname(), "timestamp":
+            datetime.now().isoformat(), "message":
+            "received message from %s, before thread" % headers['destination']}
+        stomp.send(body=json.dumps(debug_msg),
+            destination="/topic/keepalive_response")
+
+
         logging.info("Received stomp message: {message}".format(message=body))
         received_obj = None
         try:

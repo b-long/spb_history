@@ -302,6 +302,12 @@ class   MyListener(stomp.ConnectionListener):
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
             return()
+        debug_msg = {"script": os.path.basename(__file__),
+            "host": socket.gethostname(), "timestamp":
+            datetime.now().isoformat(), "message":
+            "received message from %s" % headers['destination']}
+        stomp.send(body=json.dumps(debug_msg),
+            destination="/topic/keepalive_response")
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
