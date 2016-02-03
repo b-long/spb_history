@@ -250,13 +250,6 @@ def handle_builder_event(obj):
         # chmod_retcode*,
         # normal_end
 
-def is_connection_usable():
-    try:
-        connection.connection.ping()
-    except:
-        return False
-    else:
-        return True
 
 
 # TODO: Name the callback for it's functionality, not usage.  This
@@ -312,9 +305,6 @@ class   MyListener(stomp.ConnectionListener):
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
         received_obj = None
-        if not is_connection_usable():
-            logging.info("on_message() Closing connection.")
-            connection.close()
         try:
             logging.debug("on_message() Parsing JSON.")
             received_obj = json.loads(body)
