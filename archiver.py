@@ -7,6 +7,7 @@ import stomp
 import socket
 import time
 import uuid
+import threading
 from django.db import connection
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
@@ -304,26 +305,35 @@ class   MyListener(stomp.ConnectionListener):
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
-        received_obj = None
-        try:
-            logging.debug("on_message() Parsing JSON.")
-            received_obj = json.loads(body)
-            logging.info("on_message() Successfully parsed JSON")
-        except ValueError as e:
-            logging.error("on_message() JSON is invalid: %s." % body)
-            return
-        
-        if ('job_id' in received_obj.keys()):
-            if (destination == '/topic/buildjobs'):
-                handle_job_start(received_obj)
-            elif (destination == '/topic/builderevents'):
-                handle_builder_event(received_obj)
-            logging.info("on_message() Destination handled.")
-        else:
-            logging.warning("on_message() Invalid json (no job_id key).")
-        
         # Acknowledge that the message has been processed
         self.message_received = True
+        logging.info("going to thread...")
+        t = threading.Thread(target=do_work, args=(body,))
+
+
+def do_work(body):
+    logging.info("in do_work() (thread)")
+    received_obj = None
+    try:
+        logging.debug("on_message() Parsing JSON.")
+        received_obj = json.loads(body)
+        logging.info("on_message() Successfully parsed JSON")
+    except ValueError as e:
+        logging.error("on_message() JSON is invalid: %s." % body)
+        return
+
+    if ('job_id' in received_obj.keys()):
+        if (destination == '/topic/buildjobs'):
+            handle_job_start(received_obj)
+        elif (destination == '/topic/builderevents'):
+            handle_builder_event(received_obj)
+        logging.info("on_message() Destination handled.")
+    else:
+        logging.warning("on_message() Invalid json (no job_id key).")
+
+    # Acknowledge that the message has been processed
+    self.message_received = True
+
 
 
 logging.info("main() Waiting for messages.")
