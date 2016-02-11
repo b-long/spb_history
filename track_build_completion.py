@@ -21,6 +21,7 @@ import stomp
 import uuid
 import mechanize
 import logging
+import threading
 
 from datetime import datetime
 
@@ -40,6 +41,7 @@ global build_counter
 build_counter = {}
 
 def handle_builder_event(obj):
+    logging.info("in thread (handle_builder_event)")
     global build_counter
     if ("client_id" in obj and  \
         "single_package_builder" in obj['client_id'] \
@@ -62,7 +64,7 @@ def handle_completed_build(obj):
         if 'tracker.bioconductor.org' in obj['svn_url']:
             tracker_base_url = "https://tracker.bioconductor.org"
         else:
-            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"    
+            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
     else:
         tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
 
@@ -107,7 +109,7 @@ Dear Package contributor,
 
 This is the automated single package builder at bioconductor.org.
 
-Your package has been built on Linux, Mac, and Windows. 
+Your package has been built on Linux, Mac, and Windows.
 
     """
     if ok:
@@ -165,7 +167,7 @@ def post_to_tracker(roundup_issue, tarball_name, \
     url = tracker_base_url
 
     logging.info("Attempting to post to tracker at url: '{url}'".format(url = url))
-    
+
     br = mechanize.Browser()
     br.open(url)
     br.select_form(nr=2)
@@ -241,13 +243,13 @@ class MyListener(stomp.ConnectionListener):
             "timestamp": datetime.now().isoformat()}
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
-            
+
             return()
-        
+
         debug_msg = {"script": os.path.basename(__file__),
             "host": socket.gethostname(), "timestamp":
             datetime.now().isoformat(), "message":
-            "received message from %s, before thread" % headers['destination']}
+            "received message from %s." % headers['destination']}
         stomp.send(body=json.dumps(debug_msg),
             destination="/topic/keepalive_response")
 
@@ -259,12 +261,18 @@ class MyListener(stomp.ConnectionListener):
         except ValueError as e:
             logging.error("Received invalid JSON: %s." % body)
             return
-        
-        handle_builder_event(received_obj)
+
         logging.info("Destination: %s" % headers.get('destination'))
-        
+
         # Acknowledge that the message has been processed
         self.message_received = True
+
+
+        logging.info("going to thread...")
+        t = threading.Thread(target=handle_builder_event, args=(received_obj,))
+        t.start()
+
+        # handle_builder_event(received_obj)
 
 
 try:

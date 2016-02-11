@@ -308,18 +308,19 @@ class   MyListener(stomp.ConnectionListener):
         # Acknowledge that the message has been processed
         self.message_received = True
         logging.info("going to thread...")
-        t = threading.Thread(target=do_work, args=(body,))
+        t = threading.Thread(target=do_work, args=(body,destination,))
+        t.start()
 
 
-def do_work(body):
+def do_work(body, destination):
     logging.info("in do_work() (thread)")
     received_obj = None
     try:
-        logging.debug("on_message() Parsing JSON.")
+        logging.debug("do_work() Parsing JSON.")
         received_obj = json.loads(body)
-        logging.info("on_message() Successfully parsed JSON")
+        logging.info("do_work() Successfully parsed JSON")
     except ValueError as e:
-        logging.error("on_message() JSON is invalid: %s." % body)
+        logging.error("do_work() JSON is invalid: %s." % body)
         return
 
     if ('job_id' in received_obj.keys()):
@@ -327,12 +328,10 @@ def do_work(body):
             handle_job_start(received_obj)
         elif (destination == '/topic/builderevents'):
             handle_builder_event(received_obj)
-        logging.info("on_message() Destination handled.")
+        logging.info("do_work() Destination handled.")
     else:
-        logging.warning("on_message() Invalid json (no job_id key).")
+        logging.warning("do_work() Invalid json (no job_id key).")
 
-    # Acknowledge that the message has been processed
-    self.message_received = True
 
 
 
