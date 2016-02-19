@@ -4,6 +4,7 @@ import os
 import logging
 from datetime import datetime
 import stomp
+import socket
 import time
 import uuid
 from django.db import connection
@@ -14,6 +15,7 @@ from bioconductor.communication import getNewStompConnection
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
+logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 # set up django environment
 path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -260,7 +262,7 @@ def is_connection_usable():
 # TODO: Name the callback for it's functionality, not usage.  This
 # seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
 # describe capability provided ?
-class MyListener(stomp.ConnectionListener):
+class   MyListener(stomp.ConnectionListener):
     def on_connecting(self, host_and_port):
         logging.debug('on_connecting() %s %s.' % host_and_port)
 
@@ -291,6 +293,21 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        # FIXME, don't hardcode keepalive topic name:
+        if headers['destination'] == '/topic/keepalive':
+            logging.debug('got keepalive message')
+            response = {"host": socket.gethostname(),
+            "script": os.path.basename(__file__),
+            "timestamp": datetime.now().isoformat()}
+            stomp.send(body=json.dumps(response),
+                destination="/topic/keepalive_response")
+            return()
+        debug_msg = {"script": os.path.basename(__file__),
+            "host": socket.gethostname(), "timestamp":
+            datetime.now().isoformat(), "message":
+            "received message from %s" % headers['destination']}
+        stomp.send(body=json.dumps(debug_msg),
+            destination="/topic/keepalive_response")
         logging.info("Received stomp message with body: {message}".format(message=body))
         destination = headers.get('destination')
         logging.info("Message is intended for destination: {dst}".format(dst = destination))
@@ -321,6 +338,7 @@ class MyListener(stomp.ConnectionListener):
 
 logging.info("main() Waiting for messages.")
 
+
 try:
     logging.debug("Attempting to connect using new communication module")
     stomp = getNewStompConnection('', MyListener())
@@ -329,6 +347,9 @@ try:
     logging.info("Subscribed to  %s" % "/topic/buildjobs")
     stomp.subscribe(destination="/topic/builderevents", id=uuid.uuid4().hex, ack='client')
     logging.info("Subscribed to  %s" % "/topic/builderevents")
+    stomp.subscribe(destination="/topic/keepalive", id=uuid.uuid4().hex,
+                    ack='auto')
+    logging.info("Subscribed to  %s" % "/topic/keepalive")
 except:
     logging.error("Cannot connect to Stomp")
     raise

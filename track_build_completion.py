@@ -14,12 +14,15 @@ import time
 import tempfile
 import os
 import subprocess
+import socket
 import requests
 import urllib
 import stomp
 import uuid
 import mechanize
 import logging
+
+from datetime import datetime
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
@@ -30,6 +33,7 @@ from bioconductor.config import ENVIR
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
+logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 global tracker_base_url
 global build_counter
@@ -229,6 +233,25 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        # FIXME, don't hardcode keepalive topic name:
+        if headers['destination'] == '/topic/keepalive':
+            logging.debug('got keepalive message')
+            response = {"host": socket.gethostname(),
+            "script": os.path.basename(__file__),
+            "timestamp": datetime.now().isoformat()}
+            stomp.send(body=json.dumps(response),
+                destination="/topic/keepalive_response")
+            
+            return()
+        
+        debug_msg = {"script": os.path.basename(__file__),
+            "host": socket.gethostname(), "timestamp":
+            datetime.now().isoformat(), "message":
+            "received message from %s, before thread" % headers['destination']}
+        stomp.send(body=json.dumps(debug_msg),
+            destination="/topic/keepalive_response")
+
+
         logging.info("Received stomp message: {message}".format(message=body))
         received_obj = None
         try:
@@ -251,6 +274,9 @@ try:
     stomp.subscribe(destination=TOPICS['events'], id=uuid.uuid4().hex,
                     ack='client')
     logging.info("Subscribed to destination %s" % TOPICS['events'])
+    stomp.subscribe(destination="/topic/keepalive", id=uuid.uuid4().hex,
+                    ack='auto')
+    logging.info("Subscribed to  %s" % "/topic/keepalive")
 except Exception as e:
     logging.error("main() Could not connect to ActiveMQ: %s." % e)
     raise
