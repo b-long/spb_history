@@ -14,6 +14,7 @@ import datetime
 from pytz import timezone
 import stomp
 import logging
+import re
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
 from bioconductor.config import BIOC_VERSION
@@ -25,47 +26,10 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(message)s',
                     level=logging.DEBUG)
 
 if (len(sys.argv) != 3):
-    logging.info("usage: %s <issue_id> <tracker_tarball_url>" % sys.argv[0])
+    logging.info("usage: %s <github/tracker issue id> <github repos url/tracker tarball url>" % sys.argv[0])
     sys.exit(1)
 
 
-# TODO: Name the callback for it's functionality, not usage.  This
-# seems like it's as useful as 'myFunction' or 'myMethod'.  Why not
-# describe capability provided ?
-class MyListener(stomp.ConnectionListener):
-    def on_connecting(self, host_and_port):
-        logging.debug('on_connecting() %s %s.' % host_and_port)
-
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
-
-    def on_disconnected(self):
-        logging.debug('on_disconnected().')
-
-    def on_heartbeat_timeout(self):
-        logging.debug('on_heartbeat_timeout().')
-
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
-
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
-
-    def on_send(self, frame):
-        logging.debug('on_send() %s %s %s.' %
-                      (frame.cmd, frame.headers, frame.body))
-        logging.info("Receipt: %s" % frame.headers.get('receipt-id'))
-
-    def on_heartbeat(self):
-        logging.debug('on_heartbeat().')
-
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
-
-    def on_message(self, headers, body):
-        logging.debug('on_message(): "%s".' % body)
-        self.message_received = True
 
 pacific = timezone("US/Pacific")
 now0 = datetime.datetime.now()
@@ -78,9 +42,18 @@ else: # PST
 obj = {}
 issue_id = sys.argv[1]
 url = sys.argv[2]
-segs = url.split("/")
-pkgname = segs[4]
-pkgname_bare = pkgname.split("_")[0]
+if "tracker.bioconductor.org" in url.lower():
+    pkgsrc = "autobuild"
+    segs = url.split("/")
+    pkgname = segs[4]
+    pkgname_bare = pkgname.split("_")[0]
+elif "https://github.com" in url.lower():
+    pkgsrc = "github"
+    urlcopy = re.sub(r'\.git$', "", url)
+    urlcopy = re.sub(r'\/$', "", urlcopy)
+    segs = urlcopy.split("/")
+    pkgname = segs[len(segs)-1]
+    pkgname_bare = pkgname
 
 obj['force']  = True
 obj['bioc_version'] = BIOC_VERSION
@@ -93,13 +66,13 @@ timestamp2 = now.strftime("%a %b %d %Y %H:%M:%S")
 timestamp2 = timestamp2 + " GMT-%s (%s)" % (offset, tzname)
 obj['job_id'] = "%s_%s" % (pkgname_bare, timestamp1)
 obj['time'] = timestamp2
-obj['client_id'] = "single_package_builder_autobuild:%s:%s" % (issue_id, pkgname)
+obj['client_id'] = "single_package_builder_%s:%s:%s" % (pkgsrc, issue_id, pkgname)
 
 json = json.dumps(obj)
 logging.debug("Received JSON object: '%s'", json)
 
 try:
-    stomp = getNewStompConnection('', MyListener())
+    stomp = getNewStompConnection('', stomp.PrintingListener())
 except:
     logging.info("Cannot connect")
     raise
