@@ -23,7 +23,7 @@ from bioconductor.config import TOPICS
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 if (len(sys.argv) != 3):
     logging.info("usage: %s <github/tracker issue id> <github repos url/tracker tarball url>" % sys.argv[0])
