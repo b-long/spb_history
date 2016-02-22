@@ -21,7 +21,6 @@ import stomp
 import uuid
 import mechanize
 import logging
-import re
 from octokit import Octokit
 
 from datetime import datetime
@@ -99,10 +98,10 @@ def handle_completed_build(obj):
     url = copy_report_to_site(html, tarball_name)
     post_text = get_post_text(result, url)
     if "github" in segs[0]:
-        status = post_to_github(roundup_issue, tarball_name, html, post_text,
+        post_to_github(roundup_issue, tarball_name, html, post_text,
             result)
     else:
-        status  = post_to_tracker(roundup_issue, tarball_name, html, \
+        post_to_tracker(roundup_issue, tarball_name, html, \
             post_text)
     logging.info("Done.\n")
     sys.stdout.flush()
@@ -159,10 +158,10 @@ def copy_report_to_site(html, tarball_name):
       "/usr/bin/scp -i /home/biocadmin/.ssh/pkgbuild_rsa %s webadmin@master.bioconductor.org:/extra/www/bioc/spb_reports/%s" % \
       (t[1], destfile)
     logging.info("cmd = %s\n" % cmd)
-    result = subprocess.call(cmd, shell=True)
+    subprocess.call(cmd, shell=True)
     chmod_cmd = "/usr/bin/ssh -i /home/biocadmin/.ssh/pkgbuild_rsa webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
     logging.info("chmod_cmd = %s\n" % chmod_cmd)
-    result = subprocess.call(chmod_cmd, shell=True)
+    subprocess.call(chmod_cmd, shell=True)
     os.remove(t[1])
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
@@ -293,7 +292,7 @@ class MyListener(stomp.ConnectionListener):
         received_obj = None
         try:
             received_obj = json.loads(body)
-        except ValueError as e:
+        except ValueError:
             logging.error("Received invalid JSON: %s." % body)
             return
 
