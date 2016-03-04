@@ -168,7 +168,7 @@ def copy_report_to_site(html, tarball_name):
 
 def post_to_github(issue_number, tarball_name,
   html, post_text, build_results):
-    issue_repos = "dtenenba/settings" # FIXME factor this out to (dev/prod) properties
+    issue_repos = "Bioconductor/ContributionsBeta" # FIXME factor this out to (dev/prod) properties
     token = ENVIR['github_token']
     hub = Octokit(access_token=token)
 
