@@ -31,6 +31,7 @@ from bioconductor.config import BUILD_NODES
 from bioconductor.config import TOPICS
 from bioconductor.config import CONFIG_ENVIRONMENT
 from bioconductor.config import ENVIR
+from bioconductor.config import GITHUB_ISSUE_TRACKER_REPO
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -168,7 +169,7 @@ def copy_report_to_site(html, tarball_name):
 
 def post_to_github(issue_number, tarball_name,
   html, post_text, build_results):
-    issue_repos = "Bioconductor/ContributionsBeta" # FIXME factor this out to (dev/prod) properties
+    issue_repos = GITHUB_ISSUE_TRACKER_REPO 
     token = ENVIR['github_token']
     hub = Octokit(access_token=token)
 
