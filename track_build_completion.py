@@ -21,6 +21,8 @@ import stomp
 import uuid
 import mechanize
 import logging
+import warnings
+import re
 from octokit import Octokit
 
 from datetime import datetime
@@ -167,9 +169,38 @@ def copy_report_to_site(html, tarball_name):
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
 
-def post_to_github(issue_number, tarball_name,
+def get_other_build_statuses(issue_number, hub, besides):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        comments = hub.repos("%s/issues/%s/comments" % (GITHUB_ISSUE_TRACKER_REPO,
+          issue_number)).get()
+    comments.reverse()
+    me = hub.user().get()['login']
+    comments = filter(lambda x: x['user']['login'] == me, comments)
+    comments = filter(lambda x: x['body'].strip().startswith("Dear Package contributor"),
+      comments)
+    statuses = {}
+    for comment in comments:
+        url = filter(lambda x: "/spb_reports/" in x, comment['body'].split("\n"))[0]
+        package = re.sub(r'_$', '', url.split("/")[-1].split("buildreport")[0])
+        if package in statuses:
+            break
+        if package == besides:
+            continue
+        if "Congratulations!" in comment['body']:
+            statuses[package] = ["OK"]
+        else:
+            statline = filter(lambda x:
+              x.startswith("On one or more platforms, the build results were"),
+              comment['body'].split("\n"))[0]
+            statuses[package] = re.sub(r'"|\.$', '',
+              statline.split("were:")[-1].strip()).split(',')
+    flat = [item for sublist in statuses.values() for item in sublist]
+    return (list(set(flat)))
+
+def post_to_github(issue_number, package_name,
   html, post_text, build_results):
-    issue_repos = GITHUB_ISSUE_TRACKER_REPO 
+    issue_repos = GITHUB_ISSUE_TRACKER_REPO
     token = ENVIR['github_token']
     hub = Octokit(access_token=token)
 
@@ -177,13 +208,28 @@ def post_to_github(issue_number, tarball_name,
     issue_url = "%s/issues/%s" % (issue_repos, issue_number)
     comments = hub.repos("%s/comments" % issue_url)
     res = comments.post({"body": post_text})
-    # FIXME could add labels to issue based on package status
     logging.info("Post to github result: '{res}'".format(res = res))
     if 'skipped' in build_results:
         build_results.remove('skipped')
     labels = hub.repos("%s/labels" % issue_url).get()
     possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'abnormal']
     existing_labels = [i['name'] for i in labels]
+
+    # At this point we want to add one or more labels to the issue to
+    # capture the results of this build. But if there is more than one
+    # package in the issue, we don't want to remove the labels for
+    # the builds of that issue. For example:
+    # package A: build results: OK
+    # package B: ERROR
+    # overall build-related labels should be: OK, ERROR
+    # So, build_results currently contains the results for the
+    # just-concluded build. Let's combine it with earlier results from
+    # other packages in this issue:
+    build_results = build_results + get_other_build_statuses(issue_number, hub,
+      package_name)
+    # and uniquify it:
+    build_results = list(set(build_results))
+
     for res in possible_build_results:
         if res in build_results:
             if not res in existing_labels:
