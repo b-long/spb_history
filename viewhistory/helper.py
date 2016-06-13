@@ -16,7 +16,7 @@ def get_message(build, build_phase):
     for m in messages:
         message += m.body
     return(message)
-    
+
 
 def get_messages(builds):
     phases = ['building', 'buildingbin', 'checking',
@@ -40,7 +40,7 @@ def filter_out_wrong_versions(builds, job):
 
     # FIXME get this info from a central source (config.yaml)
     if (r_ver == "3.3"):
-        if bioc_version == "3.3":
+        if bioc_version == "3.4":
             nodes = BUILD_NODES
     if (r_ver == "3.2"):
         if bioc_version == "3.1":
@@ -66,7 +66,7 @@ def filter_out_wrong_versions(builds, job):
 
     if (len(nodes) == 0):
         raise Exception("Don't know the build nodes for R-%s (BioC %s)" % (r_ver, bioc_version))
-    
+
     ret = []
     for build in builds:
         if build.builder_id in nodes:
