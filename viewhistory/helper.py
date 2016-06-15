@@ -42,6 +42,8 @@ def filter_out_wrong_versions(builds, job):
     if (r_ver == "3.3"):
         if bioc_version == "3.4":
             nodes = BUILD_NODES
+        elif bioc_version == "3.3":
+            nodes = ["zin2", "moscato2", "oaxaca"]
     if (r_ver == "3.2"):
         if bioc_version == "3.1":
             nodes = BUILD_NODES
