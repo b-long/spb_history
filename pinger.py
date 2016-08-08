@@ -1,10 +1,8 @@
-import stomp
 import time
 import logging
 
 from stomp import ConnectionListener
 from bioconductor.communication import getNewStompConnection
-from bioconductor.config import TOPICS
 
 
 TIMEOUT = 60 # timeout in seconds

@@ -320,7 +320,7 @@ class   MyListener(stomp.ConnectionListener):
             received_obj = json.loads(body)
             logging.info("on_message() Successfully parsed JSON")
         except ValueError as e:
-            logging.error("on_message() JSON is invalid: %s." % body)
+            logging.error("on_message() JSON is invalid: %s." % e)
             return
         
         if ('job_id' in received_obj.keys()):
