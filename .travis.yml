@@ -13,6 +13,3 @@ before_install:
   - pyflakes track_build_completion.py
 script:
   - python -c 'print "Finished static analysis"'
-notifications:
-  email:
-    - dtenenba@fredhutch.org
