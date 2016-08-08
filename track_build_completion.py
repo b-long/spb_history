@@ -38,6 +38,7 @@ logging.getLogger("stomp.py").setLevel(logging.WARNING)
 global tracker_base_url
 global build_counter
 build_counter = {}
+tracker_base_url = None
 
 def handle_builder_event(obj):
     global build_counter
@@ -93,6 +94,7 @@ def handle_completed_build(obj):
     post_text = get_post_text(result, url)
     status  = post_to_tracker(roundup_issue, tarball_name, html, \
         post_text)
+    logging.debug("Post_to_tracker: %s\n" % status)
     logging.info("Done.\n")
     sys.stdout.flush()
 
@@ -152,6 +154,7 @@ def copy_report_to_site(html, tarball_name):
     chmod_cmd = "/usr/bin/ssh -i /home/biocadmin/.ssh/pkgbuild_rsa webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
     logging.info("chmod_cmd = %s\n" % chmod_cmd)
     result = subprocess.call(chmod_cmd, shell=True)
+    logging.debug("Result: %s\n" % result)
     os.remove(t[1])
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
@@ -257,7 +260,7 @@ class MyListener(stomp.ConnectionListener):
         try:
             received_obj = json.loads(body)
         except ValueError as e:
-            logging.error("Received invalid JSON: %s." % body)
+            logging.error("Received invalid JSON: %s." % e)
             return
         
         handle_builder_event(received_obj)
