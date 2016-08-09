@@ -43,6 +43,7 @@ logging.getLogger("stomp.py").setLevel(logging.WARNING)
 global tracker_base_url
 global build_counter
 build_counter = {}
+tracker_base_url = None
 
 def handle_builder_event(obj):
     global build_counter
@@ -339,8 +340,8 @@ class MyListener(stomp.ConnectionListener):
         received_obj = None
         try:
             received_obj = json.loads(body)
-        except ValueError:
-            logging.error("Received invalid JSON: %s." % body)
+        except ValueError as e:
+            logging.error("Received invalid JSON: %s." % e)
             return
 
         handle_builder_event(received_obj)
