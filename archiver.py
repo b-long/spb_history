@@ -322,7 +322,7 @@ class   MyListener(stomp.ConnectionListener):
         except ValueError as e:
             logging.error("on_message() JSON is invalid: %s." % e)
             return
-        
+
         if ('job_id' in received_obj.keys()):
             if (destination == '/topic/buildjobs'):
                 handle_job_start(received_obj)
@@ -331,7 +331,7 @@ class   MyListener(stomp.ConnectionListener):
             logging.info("on_message() Destination handled.")
         else:
             logging.warning("on_message() Invalid json (no job_id key).")
-        
+
         # Acknowledge that the message has been processed
         self.message_received = True
 

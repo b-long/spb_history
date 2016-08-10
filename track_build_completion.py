@@ -21,6 +21,9 @@ import stomp
 import uuid
 import mechanize
 import logging
+import warnings
+import re
+from octokit import Octokit
 
 from datetime import datetime
 
@@ -28,7 +31,9 @@ from datetime import datetime
 from bioconductor.communication import getNewStompConnection
 from bioconductor.config import BUILD_NODES
 from bioconductor.config import TOPICS
+from bioconductor.config import CONFIG_ENVIRONMENT
 from bioconductor.config import ENVIR
+from bioconductor.config import GITHUB_ISSUE_TRACKER_REPO
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -63,19 +68,23 @@ def handle_completed_build(obj):
         if 'tracker.bioconductor.org' in obj['svn_url']:
             tracker_base_url = "https://tracker.bioconductor.org"
         else:
-            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"    
+            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
     else:
         tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
 
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
     tarball_name = segs[2]
-    f = urllib.urlopen("http://staging.bioconductor.org:8000/jid/%s" % obj['job_id'])
+    if CONFIG_ENVIRONMENT == "production":
+        staging_url = "staging.bioconductor.org"
+    elif CONFIG_ENVIRONMENT == "development":
+        staging_url = "localhost"
+    f = urllib.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
     job_id = f.read().strip()
     if job_id == "0":
         logging.info("There is no build report for this job!")
         return
-    url = "http://staging.bioconductor.org:8000/job/%s/" % job_id
+    url = "http://%s:8000/job/%s/" % (staging_url, job_id)
     logging.info("build report url: %s\n" %url)
     sys.stdout.flush()
     logging.info("Sleeping for 30 seconds...\n")
@@ -87,14 +96,17 @@ def handle_completed_build(obj):
     html = filter_html(html)
     #logging.info("html after filtering: %s\n" % html)
 
-    f = urllib.urlopen("http://staging.bioconductor.org:8000/overall_build_status/%s"\
-        % job_id)
+    f = urllib.urlopen("http://%s:8000/overall_build_status/%s"\
+        % (staging_url, job_id))
     result = f.read().strip().split(", ")
     url = copy_report_to_site(html, tarball_name)
     post_text = get_post_text(result, url)
-    status  = post_to_tracker(roundup_issue, tarball_name, html, \
-        post_text)
-    logging.debug("Post_to_tracker: %s\n" % status)
+    if "github" in segs[0]:
+        post_to_github(roundup_issue, tarball_name, html, post_text,
+            result)
+    else:
+        post_to_tracker(roundup_issue, tarball_name, html, \
+            post_text)
     logging.info("Done.\n")
     sys.stdout.flush()
 
@@ -109,7 +121,7 @@ Dear Package contributor,
 
 This is the automated single package builder at bioconductor.org.
 
-Your package has been built on Linux, Mac, and Windows. 
+Your package has been built on Linux, Mac, and Windows.
 
     """
     if ok:
@@ -150,14 +162,83 @@ def copy_report_to_site(html, tarball_name):
       "/usr/bin/scp -i /home/biocadmin/.ssh/pkgbuild_rsa %s webadmin@master.bioconductor.org:/extra/www/bioc/spb_reports/%s" % \
       (t[1], destfile)
     logging.info("cmd = %s\n" % cmd)
-    result = subprocess.call(cmd, shell=True)
+    subprocess.call(cmd, shell=True)
     chmod_cmd = "/usr/bin/ssh -i /home/biocadmin/.ssh/pkgbuild_rsa webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
     logging.info("chmod_cmd = %s\n" % chmod_cmd)
-    result = subprocess.call(chmod_cmd, shell=True)
-    logging.debug("Result: %s\n" % result)
+    subprocess.call(chmod_cmd, shell=True)
     os.remove(t[1])
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
+
+def get_other_build_statuses(issue_number, hub, besides):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        comments = hub.repos("%s/issues/%s/comments" % (GITHUB_ISSUE_TRACKER_REPO,
+          issue_number)).get()
+    comments.reverse()
+    me = hub.user().get()['login']
+    comments = filter(lambda x: x['user']['login'] == me, comments)
+    comments = filter(lambda x: x['body'].strip().startswith("Dear Package contributor"),
+      comments)
+    statuses = {}
+    for comment in comments:
+        url = filter(lambda x: "/spb_reports/" in x, comment['body'].split("\n"))[0]
+        package = re.sub(r'_$', '', url.split("/")[-1].split("buildreport")[0])
+        if package in statuses:
+            break
+        if package == besides:
+            continue
+        if "Congratulations!" in comment['body']:
+            statuses[package] = ["OK"]
+        else:
+            statline = filter(lambda x:
+              x.startswith("On one or more platforms, the build results were"),
+              comment['body'].split("\n"))[0]
+            statuses[package] = re.sub(r'"|\.$', '',
+              statline.split("were:")[-1].strip()).split(',')
+    flat = [item for sublist in statuses.values() for item in sublist]
+    return (list(set(flat)))
+
+def post_to_github(issue_number, package_name,
+  html, post_text, build_results):
+    issue_repos = GITHUB_ISSUE_TRACKER_REPO
+    token = ENVIR['github_token']
+    hub = Octokit(access_token=token)
+
+    logging.info("Attempting to post to github at repos %s." % issue_repos)
+    issue_url = "%s/issues/%s" % (issue_repos, issue_number)
+    comments = hub.repos("%s/comments" % issue_url)
+    res = comments.post({"body": post_text})
+    logging.info("Post to github result: '{res}'".format(res = res))
+    if 'skipped' in build_results:
+        build_results.remove('skipped')
+    labels = hub.repos("%s/labels" % issue_url).get()
+    possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'abnormal']
+    existing_labels = [i['name'] for i in labels]
+
+    # At this point we want to add one or more labels to the issue to
+    # capture the results of this build. But if there is more than one
+    # package in the issue, we don't want to remove the labels for
+    # the builds of that issue. For example:
+    # package A: build results: OK
+    # package B: ERROR
+    # overall build-related labels should be: OK, ERROR
+    # So, build_results currently contains the results for the
+    # just-concluded build. Let's combine it with earlier results from
+    # other packages in this issue:
+    build_results = build_results + get_other_build_statuses(issue_number, hub,
+      package_name)
+    # and uniquify it:
+    build_results = list(set(build_results))
+
+    for res in possible_build_results:
+        if res in build_results:
+            if not res in existing_labels:
+                hub.repos("%s/labels" % issue_url).post([res])
+        else:
+            if res in existing_labels:
+                hub.repos("%s/labels/%s" % (issue_url, res)).delete()
+
 
 
 def post_to_tracker(roundup_issue, tarball_name, \
@@ -168,7 +249,7 @@ def post_to_tracker(roundup_issue, tarball_name, \
     url = tracker_base_url
 
     logging.info("Attempting to post to tracker at url: '{url}'".format(url = url))
-    
+
     br = mechanize.Browser()
     br.open(url)
     br.select_form(nr=2)
@@ -244,9 +325,9 @@ class MyListener(stomp.ConnectionListener):
             "timestamp": datetime.now().isoformat()}
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
-            
+
             return()
-        
+
         debug_msg = {"script": os.path.basename(__file__),
             "host": socket.gethostname(), "timestamp":
             datetime.now().isoformat(), "message":
@@ -262,10 +343,10 @@ class MyListener(stomp.ConnectionListener):
         except ValueError as e:
             logging.error("Received invalid JSON: %s." % e)
             return
-        
+
         handle_builder_event(received_obj)
         logging.info("Destination: %s" % headers.get('destination'))
-        
+
         # Acknowledge that the message has been processed
         self.message_received = True
 

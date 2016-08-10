@@ -432,6 +432,32 @@ TABLE.mainrep .even .pelham {
     background: #B9C;
 }
 
+
+/* morelia */
+DIV.morelia,
+TR.morelia TD,
+TABLE.mainrep .morelia,
+TABLE.mainrep .odd .morelia {
+    background: #DBE;
+}
+TABLE.mainrep .even .morelia {
+    background: #B9C;
+}
+
+
+/* oaxaca */
+DIV.oaxaca,
+TR.oaxaca TD,
+TABLE.mainrep .oaxaca,
+TABLE.mainrep .odd .oaxaca {
+    background: #DBE;
+}
+TABLE.mainrep .even .oaxaca {
+    background: #B9C;
+}
+
+
+
 /* petty */
 DIV.petty,
 TR.petty TD,

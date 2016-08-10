@@ -30,8 +30,7 @@ except Exception as e:
 
 while True:
     stomp.send(destination="/topic/keepalive", body="stay alive!")
-    # level is set to info to keep logs quiet, change to info if 
+    # level is set to info to keep logs quiet, change to debug if
     # you want to see the following.
     logging.debug("Sent keepalive message.")
     time.sleep(TIMEOUT)
-
