@@ -31,9 +31,7 @@ from datetime import datetime
 from bioconductor.communication import getNewStompConnection
 from bioconductor.config import BUILD_NODES
 from bioconductor.config import TOPICS
-from bioconductor.config import CONFIG_ENVIRONMENT
 from bioconductor.config import ENVIR
-from bioconductor.config import GITHUB_ISSUE_TRACKER_REPO
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -75,10 +73,7 @@ def handle_completed_build(obj):
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
     tarball_name = segs[2]
-    if CONFIG_ENVIRONMENT == "production":
-        staging_url = "staging.bioconductor.org"
-    elif CONFIG_ENVIRONMENT == "development":
-        staging_url = "localhost"
+    staging_url = ENVIR['spb.staging.url']
     f = urllib.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
     job_id = f.read().strip()
     if job_id == "0":
@@ -173,8 +168,8 @@ def copy_report_to_site(html, tarball_name):
 def get_other_build_statuses(issue_number, hub, besides):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        comments = hub.repos("%s/issues/%s/comments" % (GITHUB_ISSUE_TRACKER_REPO,
-          issue_number)).get()
+        comments = hub.repos("%s/issues/%s/comments" % (
+            ENVIR['github_issue_repo']), issue_number)).get()
     comments.reverse()
     me = hub.user().get()['login']
     comments = filter(lambda x: x['user']['login'] == me, comments)
@@ -201,7 +196,7 @@ def get_other_build_statuses(issue_number, hub, besides):
 
 def post_to_github(issue_number, package_name,
   html, post_text, build_results):
-    issue_repos = GITHUB_ISSUE_TRACKER_REPO
+    issue_repos = ENVIR['github_issue_repo']
     token = ENVIR['github_token']
     hub = Octokit(access_token=token)
 
