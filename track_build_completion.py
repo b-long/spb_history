@@ -169,7 +169,7 @@ def get_other_build_statuses(issue_number, hub, besides):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         comments = hub.repos("%s/issues/%s/comments" % (
-            ENVIR['github_issue_repo']), issue_number)).get()
+            ENVIR['github_issue_repo'], issue_number)).get()
     comments.reverse()
     me = hub.user().get()['login']
     comments = filter(lambda x: x['user']['login'] == me, comments)
