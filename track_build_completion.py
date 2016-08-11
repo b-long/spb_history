@@ -73,7 +73,7 @@ def handle_completed_build(obj):
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
     tarball_name = segs[2]
-    staging_url = ENVIR['spb.staging.url']
+    staging_url = ENVIR['spb_staging_url']
     f = urllib.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
     job_id = f.read().strip()
     if job_id == "0":
@@ -153,12 +153,13 @@ def copy_report_to_site(html, tarball_name):
     now = time.localtime()
     ts = time.strftime("%Y%m%d%H%M%S", now)
     destfile = "%s_buildreport_%s.html" % (pkg, ts)
-    cmd = \
-      "/usr/bin/scp -i /home/biocadmin/.ssh/pkgbuild_rsa %s webadmin@master.bioconductor.org:/extra/www/bioc/spb_reports/%s" % \
-      (t[1], destfile)
+    cmd = "/usr/bin/scp -i " + ENVIR['spb_RSA_key'] + \
+          " %s webadmin@master.bioconductor.org:/extra/www/bioc/spb_reports/%s" % \
+          (t[1], destfile)
     logging.info("cmd = %s\n" % cmd)
     subprocess.call(cmd, shell=True)
-    chmod_cmd = "/usr/bin/ssh -i /home/biocadmin/.ssh/pkgbuild_rsa webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
+    chmod_cmd = "/usr/bin/ssh -i " + ENVIR['spb_RSA_key'] + \
+                " webadmin@master.bioconductor.org \"chmod a+r /extra/www/bioc/spb_reports/%s\"" % destfile
     logging.info("chmod_cmd = %s\n" % chmod_cmd)
     subprocess.call(chmod_cmd, shell=True)
     os.remove(t[1])
