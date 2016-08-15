@@ -313,26 +313,26 @@ class MyListener(stomp.ConnectionListener):
         logging.debug('on_error(): "%s".' % message)
 
     def on_message(self, headers, body):
+        logging.debug("Received stomp message: {message}".format(message=body))
+        logging.info("on_message() " + body)
         # FIXME, don't hardcode keepalive topic name:
         if headers['destination'] == '/topic/keepalive':
-            logging.debug('got keepalive message')
-            response = {"host": socket.gethostname(),
-            "script": os.path.basename(__file__),
-            "timestamp": datetime.now().isoformat()}
+            response = {
+                "host": socket.gethostname(),
+                "script": os.path.basename(__file__)
+            }
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
-
             return()
 
-        debug_msg = {"script": os.path.basename(__file__),
-            "host": socket.gethostname(), "timestamp":
-            datetime.now().isoformat(), "message":
-            "received message from %s, before thread" % headers['destination']}
+        debug_msg = {
+            "script": os.path.basename(__file__),
+            "host": socket.gethostname(), 
+            "message": "received message from %s, before thread" % headers['destination']
+        }
         stomp.send(body=json.dumps(debug_msg),
             destination="/topic/keepalive_response")
 
-
-        logging.info("Received stomp message: {message}".format(message=body))
         received_obj = None
         try:
             received_obj = json.loads(body)
@@ -341,7 +341,6 @@ class MyListener(stomp.ConnectionListener):
             return
 
         handle_builder_event(received_obj)
-        logging.info("Destination: %s" % headers.get('destination'))
 
         # Acknowledge that the message has been processed
         self.message_received = True
