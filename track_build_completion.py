@@ -25,8 +25,6 @@ import warnings
 import re
 from octokit import Octokit
 
-from datetime import datetime
-
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
 from bioconductor.config import BUILD_NODES
