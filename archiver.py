@@ -247,9 +247,11 @@ def handle_builder_event(obj):
             build_obj.postprocessing_result = 'skipped'
             build_obj.save()
         elif (status in ['git_cmd', 'git_result','starting_check',
-                         'Builder has been started']):
+                         'Builder has been started', 'chmod_retcode',
+                         'starting_buildbin','normal_end','clear_check_console']):
             # temporarily manage 'status' messages not dealt with above
             # to avoid below info with whole object printed
+            # TODO: consider specialized handling
             logging.info("on message(): %s." % status)
         elif (status == 'Got Build Request'):
             logging.info("on message(): Got Build Request")
