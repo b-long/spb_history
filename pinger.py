@@ -1,5 +1,6 @@
 import time
 import logging
+import json
 
 from stomp import ConnectionListener
 from bioconductor.communication import getNewStompConnection
@@ -29,7 +30,7 @@ except Exception as e:
 
 
 while True:
-    stomp.send(destination="/topic/keepalive", body="stay alive!")
+    stomp.send(destination="/topic/keepalive", body=json.dumps("stay alive!"))
     # level is set to info to keep logs quiet, change to debug if
     # you want to see the following.
     logging.debug("Sent keepalive message.")
