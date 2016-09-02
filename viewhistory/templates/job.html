@@ -5,10 +5,7 @@
 	    <a name="top"></a>
 		<h1>Bioconductor Single Package Builder - Build History</h1>
 		
-		
-		<div id="build_start"><p><a href="http://staging.bioconductor.org:4000">New Build</a></p><p>
-</p></div>
-		
+	
 		<div id="error"></div>
 
 		<div id="initially_hidden" style="display: block; ">
@@ -109,16 +106,22 @@
                 </span></td></tr> 
 
                 					<tr><td><b>BuildCommand</b>: <span id="{{build.builder_id}}_command">{{build.r_cmd}}</span></td></tr> 
-                					<tr><td><b>CheckCommand</b>: <span id="{{build.builder_id}}_check_command">{{build.check_cmd}}</span></td></tr> 
-                					<tr><td><b>BuildBinCommand</b>: <span id="{{build.builder_id}}_buildbin_command">{{build.r_buildbin_cmd}}</span></td></tr> 
-                					<tr><td><b>Status</b>: <span id="{{build.builder_id}}_status" class="{{build.builder_id}}_EVENT OK">{{build.postprocessing_result}}</span></td></tr> 
+                					<tr><td><b>BuildTime</b>: <span id="{{build.builder_id}}_buildtime">{{build.buildsrc_time}}</span></td></tr> 
+                					<tr><td><b>CheckCommand</b>: <span id="{{build.builder_id}}_check_command">{{build.check_cmd}}</span></td></tr>
+   							<tr><td><b>CheckTime</b>: <span id="{{build.builder_id}}_checktime">{{build.check_time}}</span></td></tr>
+                 					<tr><td><b>BuildBinCommand</b>: <span id="{{build.builder_id}}_buildbin_command">{{build.r_buildbin_cmd}}</span></td></tr>
+ 							<tr><td><b>BuildBinTime</b>: <span id="{{build.builder_id}}_buildbintime">{{build.buildbin_time}}</span></td></tr>
+                 					<tr><td><b>Status</b>: <span id="{{build.builder_id}}_status" class="{{build.builder_id}}_EVENT OK">{{build.postprocessing_result}}</span></td></tr> 
                 					<tr><td><b>PackageFile</b>: <span id="{{build.builder_id}}_build_product"><a href="http://bioconductor.org/scratch-repos/{{job.bioc_version}}/{{build.pkg_type}}/{{build.build_product}}"> {{build.build_product}}</a></span></td></tr> 
                 					<tr><td><b>PackageFileSize</b>: <span id="{{build.builder_id}}_file_size">{{build.filesize}}</span> <a href="http://en.wikipedia.org/wiki/KiB" target="_blank">KiB</a></td></tr> 
                 					<tr><td><b>BuildID:</b>: <span id="{{build.builder_id}}_build_id">{{job.job_id}}</span></td></tr> 
                 					<tr><td><b>PreProcessing</b>: <span id="{{build.builder_id}}_pre_processing">{{build.preprocessing_message}}</span></td></tr> 
                 					<tr><td><b>PostProcessing</b>: <span id="{{build.builder_id}}_post_processing">{{build.post_processing_message}}</span></td></tr> 
-                					<tr><td><b>InstallCommand</b>: <br><pre id="{{build.builder_id}}_install_command">source("http://bioconductor.org/scratch-repos/pkgInstall.R")
-                pkgInstall("{{job.package}}")</pre></td></tr>
+                					<tr><td><b>InstallCommand</b>: <br>
+<pre id="{{build.builder_id}}_install_command">
+    source("http://bioconductor.org/scratch-repos/pkgInstall.R")
+    pkgInstall("{{job.package}}")</pre>
+							</td></tr>
                 				</tbody></table> 
                 			</div> 
                 			<hr> 

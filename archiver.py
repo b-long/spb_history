@@ -92,7 +92,10 @@ def handle_first_message(obj, parent_job):
       invalid_url=False,
       build_not_required=False,
       build_product='',
-      filesize=-1)
+      filesize=-1,
+      buildsrc_time='',
+      buildbin_time='',
+      check_time='')
     build.save()
     return(build)
 
@@ -133,11 +136,13 @@ def handle_complete(obj, build_obj):
                   % (obj['status'], result))
     if (obj['status'] == 'build_complete'):
         build_obj.buildsrc_result = result
+        build_obj.buildsrc_time = obj['elapsed_time']
         if result == "ERROR":
             build_obj.checksrc_result = "skipped"
             build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
     elif (obj['status'] == 'check_complete'):
+        build_obj.check_time = obj['elapsed_time']
         if result == "ERROR":
             #build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
@@ -148,6 +153,7 @@ def handle_complete(obj, build_obj):
         if result == "ERROR":
             build_obj.postprocessing_result = "skipped"
         build_obj.buildbin_result = result
+        build_obj.buildbin_time = obj['elapsed_time']
     elif (obj['status'] == 'post_processing_complete'):
         build_obj.postprocessing_result = result
     build_obj.save()
@@ -160,9 +166,9 @@ def handle_builder_event(obj):
     if (obj.has_key('job_id')):
         job_id = obj['job_id']
         try:
-            logging.info("Checking if job exists")
+            logging.debug("Checking if job exists")
             parent_job = Job.objects.get(job_id=job_id)
-            logging.info("Job already exists")
+            logging.debug("Job already exists")
         except Job.DoesNotExist:
             logging.warning("No parent job for %s; ignoring message." % job_id)
             return()
@@ -240,6 +246,15 @@ def handle_builder_event(obj):
             build_obj.buildbin_result = 'skipped'
             build_obj.postprocessing_result = 'skipped'
             build_obj.save()
+        elif (status in ['git_cmd', 'git_result','starting_check',
+                         'Builder has been started']):
+            # temporarily manage 'status' messages not dealt with above
+            # to avoid below info with whole object printed
+            logging.info("on message(): %s." % status)
+        elif (status == 'Got Build Request'):
+            logging.info("on message(): Got Build Request")
+        elif (status == 'autoexit'):
+            logging.info("on message(): Done")
         else:
             logging.info("handle_builder_event() Ignoring message: %s." % obj)
     else:
@@ -308,17 +323,37 @@ class   MyListener(stomp.ConnectionListener):
             "received message from %s" % headers['destination']}
         stomp.send(body=json.dumps(debug_msg),
             destination="/topic/keepalive_response")
-        logging.info("Received stomp message with body: {message}".format(message=body))
+
+        # clean this log message up
+        #logging.info("Received stomp message with body: {message}".format(message=body))
+        dic = json.loads(body)
+        msg = ''
+        if 'builder_id' in dic:
+            msg = msg + "builder_id: " + dic['builder_id'] + " "
+        if 'job_id' in dic:
+            msg = msg + "job_id: " + dic['job_id'] + " "
+        if 'status' in dic:
+            msg = msg + "status: " + dic['status'] + " "
+        if 'sequence' in dic:
+            msg = msg + "sequence: " + str(dic['sequence']) + " "
+        if 'elapsed_time' in dic:
+            msg = msg + "elapsed_time: " + str(dic['elapsed_time']) + " "
+        if 'retcode' in dic:
+            msg = msg + "retcode: " + str(dic['retcode']) + " "
+
+        logging.info("on message: " + msg)
+
+
         destination = headers.get('destination')
-        logging.info("Message is intended for destination: {dst}".format(dst = destination))
+        logging.debug("Message is intended for destination: {dst}".format(dst = destination))
         received_obj = None
         if not is_connection_usable():
-            logging.info("on_message() Closing connection.")
+            logging.debug("on_message() Closing connection.")
             connection.close()
         try:
             logging.debug("on_message() Parsing JSON.")
             received_obj = json.loads(body)
-            logging.info("on_message() Successfully parsed JSON")
+            logging.debug("on_message() Successfully parsed JSON")
         except ValueError as e:
             logging.error("on_message() JSON is invalid: %s." % e)
             return
@@ -328,7 +363,7 @@ class   MyListener(stomp.ConnectionListener):
                 handle_job_start(received_obj)
             elif (destination == '/topic/builderevents'):
                 handle_builder_event(received_obj)
-            logging.info("on_message() Destination handled.")
+            logging.debug("on_message() Destination handled.")
         else:
             logging.warning("on_message() Invalid json (no job_id key).")
 

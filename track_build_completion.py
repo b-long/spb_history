@@ -1,4 +1,3 @@
-
 # This script listens to messages from the single
 # package builder, and posts build reports to the
 # issue tracker when it detects a completed build.
@@ -312,7 +311,26 @@ class MyListener(stomp.ConnectionListener):
 
     def on_message(self, headers, body):
         logging.debug("Received stomp message: {message}".format(message=body))
-        logging.info("on_message() " + body)
+        #logging.info("on_message() " + body)
+        dic = json.loads(body)
+        msg = ''
+        if 'builder_id' in dic:
+            msg = msg + "builder_id: " + dic['builder_id'] + " "
+        if 'job_id' in dic:
+            msg = msg + "job_id: " + dic['job_id'] + " "
+        if 'status' in dic:
+            msg = msg + "status: " + dic['status'] + " "
+        if 'sequence' in dic:
+            msg = msg + "sequence: " + str(dic['sequence']) + " "
+        if 'elapsed_time' in dic:
+            msg = msg + "elapsed_time: " + str(dic['elapsed_time']) + " "
+        if 'retcode' in dic:
+            msg = msg + "retcode: " + str(dic['retcode']) + " "
+
+
+        logging.info("on_message(): " + msg)
+
+
         # FIXME, don't hardcode keepalive topic name:
         if headers['destination'] == '/topic/keepalive':
             response = {
@@ -325,7 +343,7 @@ class MyListener(stomp.ConnectionListener):
 
         debug_msg = {
             "script": os.path.basename(__file__),
-            "host": socket.gethostname(), 
+            "host": socket.gethostname(),
             "message": "received message from %s, before thread" % headers['destination']
         }
         stomp.send(body=json.dumps(debug_msg),
