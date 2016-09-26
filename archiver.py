@@ -314,8 +314,7 @@ class   MyListener(stomp.ConnectionListener):
         if headers['destination'] == '/topic/keepalive':
             logging.debug('got keepalive message')
             response = {"host": socket.gethostname(),
-            "script": os.path.basename(__file__),
-            "timestamp": datetime.now().isoformat()}
+            "script": os.path.basename(__file__)}
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
             return()
