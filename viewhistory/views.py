@@ -1,12 +1,12 @@
 # Create your views here.
 
 from django.template import RequestContext
-from django.http import HttpResponse
+#from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from viewhistory.models import Package
 from viewhistory.models import Job
 from viewhistory.models import Build
-from viewhistory.models import Message
+#from viewhistory.models import Message
 from viewhistory import helper
 
 def index(request):
@@ -78,6 +78,6 @@ def overall_build_status(request, job_id):
     else:
         res = ', '.join(set(result))
     if len(build_statuses) == 0:
-        res = "abnormal"
+        res = "ABNORMAL"
     return render_to_response('overall_build_status.html', {"res": res},
         context_instance=RequestContext(request))

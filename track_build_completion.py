@@ -206,7 +206,7 @@ def post_to_github(issue_number, package_name,
     if 'skipped' in build_results:
         build_results.remove('skipped')
     labels = hub.repos("%s/labels" % issue_url).get()
-    possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'abnormal']
+    possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'ABNORMAL']
     existing_labels = [i['name'] for i in labels]
 
     # At this point we want to add one or more labels to the issue to
