@@ -123,8 +123,6 @@ def get_build_obj(obj):
 
 def handle_complete(obj, build_obj):
 
-    if obj.has_key("result_code"):
-        obj['retcode'] = obj['result_code']
     if obj['retcode'] == 0:
         if obj.has_key("warnings") and obj['warnings'] == True:
             result = "WARNINGS"
