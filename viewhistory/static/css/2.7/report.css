@@ -236,7 +236,7 @@ TABLE.mainrep .malbec1,
 TABLE.mainrep .odd .malbec1 {
     background: #b3e0ff;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .malbec1 {
     background: #b3e0ff;
 }
 
@@ -247,7 +247,7 @@ TABLE.mainrep .tokay1,
 TABLE.mainrep .odd .tokay1 {
     background: #ffccff;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .tokay1 {
     background: #ffccff;
 }
 
@@ -269,7 +269,7 @@ TABLE.mainrep .malbec2,
 TABLE.mainrep .odd .malbec2 {
     background: #b3e0ff;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .malbec2 {
     background: #b3e0ff;
 }
 
@@ -280,7 +280,7 @@ TABLE.mainrep .tokay2,
 TABLE.mainrep .odd .tokay2 {
     background: #ffccff;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .tokay2 {
     background: #ffccff;
 }
 
@@ -302,7 +302,7 @@ TABLE.mainrep .lori-hp-zbook-15-g2,
 TABLE.mainrep .odd .lori-hp-zbook-15-g2 {
     background: #b3e0ff;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .lori-hp-zbook-15-g2 {
     background: #b3e0ff;
 }
 
@@ -313,7 +313,7 @@ TABLE.mainrep .zin1,
 TABLE.mainrep .odd .zin1 {
     background: #BCD;
 }
-TABLE.mainrep .even .lamb2 {
+TABLE.mainrep .even .zin1 {
     background: #9AB;
 }
 
