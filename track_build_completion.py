@@ -43,17 +43,21 @@ tracker_base_url = None
 def handle_builder_event(obj):
     global build_counter
     if ("client_id" in obj and  \
-        "single_package_builder" in obj['client_id'] \
-        and 'status' in obj and obj['status'] == 'autoexit'):
+        "single_package_builder" in obj['client_id']):
         builder_id = obj['builder_id']
         job_id = obj['job_id']
-        logging.info("Looks like the build is complete on node %s" % \
-          builder_id)
-        if (not job_id in build_counter):
-            build_counter[job_id] = 1
-        else:
-            build_counter[job_id] += 1
-        if (build_counter[job_id] == len(BUILD_NODES)):
+
+        if (not job_id in build_counter and obj['status'] == 'Got Build Request'):
+            build_counter.setdefault(job_id, []).append(builder_id)
+        elif (obj['status'] == 'Got Build Request' and \
+                 not builder_id in build_counter[job_id]):
+            build_counter.setdefault(job_id, []).append(builder_id)
+        elif (job_id in build_counter and obj['status'] == 'autoexit'):
+            logging.info("Looks like the build is complete on node %s" % \
+            builder_id)
+            build_counter.setdefault(job_id, []).remove(builder_id)
+
+        if (job_id in build_counter and len(build_counter[job_id]) == 0):
             logging.info("We have enough finished builds to send a report.")
             handle_completed_build(obj)
 
