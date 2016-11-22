@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. env/bin/activate
+source env/bin/activate
 
-nohup python pinger.py > pinger.log 2>&1 & 
-
+nohup python -m pinger.py >> pinger.log 2>&1 &
