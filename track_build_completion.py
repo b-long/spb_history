@@ -26,7 +26,6 @@ from octokit import Octokit
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
-from bioconductor.config import BUILD_NODES
 from bioconductor.config import TOPICS
 from bioconductor.config import ENVIR
 
