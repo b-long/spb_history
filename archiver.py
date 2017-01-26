@@ -140,6 +140,7 @@ def handle_complete(obj, build_obj):
             build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
     elif (obj['status'] == 'check_complete'):
+
         build_obj.check_time = obj['elapsed_time']
         if result == "ERROR":
             #build_obj.buildbin_result = "skipped"
@@ -147,6 +148,9 @@ def handle_complete(obj, build_obj):
         build_obj.checksrc_result = result
         if "Linux" in build_obj.os:
             build_obj.buildbin_result = "skipped"
+        if obj['retcode'] == -9: 
+            build_obj.checksrc_result = "TIMEOUT"
+
     elif (obj['status'] == 'buildbin_complete'):
         if result == "ERROR":
             build_obj.postprocessing_result = "skipped"
