@@ -140,7 +140,7 @@ def handle_complete(obj, build_obj):
             build_obj.checksrc_result = "skipped"
             build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
-        if obj['retcode'] == -15: 
+        if obj['retcode'] == -9: 
             build_obj.buildsrc_result = "TIMEOUT"
 
     elif (obj['status'] == 'check_complete'):
@@ -159,7 +159,7 @@ def handle_complete(obj, build_obj):
             build_obj.postprocessing_result = "skipped"
         build_obj.buildbin_result = result
         build_obj.buildbin_time = obj['elapsed_time']
-        if obj['retcode'] == -15: 
+        if obj['retcode'] == -9: 
             build_obj.buildbin_result = "TIMEOUT"
 
     elif (obj['status'] == 'post_processing_complete'):
