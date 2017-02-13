@@ -132,6 +132,7 @@ def handle_complete(obj, build_obj):
         result = "ERROR"
     logging.debug("handle_complete() status: %s; result: %s."
                   % (obj['status'], result))
+
     if (obj['status'] == 'build_complete'):
         build_obj.buildsrc_result = result
         build_obj.buildsrc_time = obj['elapsed_time']
@@ -139,8 +140,10 @@ def handle_complete(obj, build_obj):
             build_obj.checksrc_result = "skipped"
             build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
-    elif (obj['status'] == 'check_complete'):
+        if obj['retcode'] == -9: 
+            build_obj.buildsrc_result = "TIMEOUT"
 
+    elif (obj['status'] == 'check_complete'):
         build_obj.check_time = obj['elapsed_time']
         if result == "ERROR":
             #build_obj.buildbin_result = "skipped"
@@ -156,6 +159,9 @@ def handle_complete(obj, build_obj):
             build_obj.postprocessing_result = "skipped"
         build_obj.buildbin_result = result
         build_obj.buildbin_time = obj['elapsed_time']
+        if obj['retcode'] == -9: 
+            build_obj.buildbin_result = "TIMEOUT"
+
     elif (obj['status'] == 'post_processing_complete'):
         build_obj.postprocessing_result = result
     build_obj.save()
