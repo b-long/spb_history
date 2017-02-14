@@ -140,7 +140,8 @@ def handle_complete(obj, build_obj):
             build_obj.checksrc_result = "skipped"
             build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
-        if obj['retcode'] == -9: 
+        logging.debug("builder_id: %s Retcode: %s" % (obj['builder_id'], str(obj['retcode'])))
+        if obj['retcode'] == -9:
             build_obj.buildsrc_result = "TIMEOUT"
 
     elif (obj['status'] == 'check_complete'):
@@ -151,7 +152,7 @@ def handle_complete(obj, build_obj):
         build_obj.checksrc_result = result
         if "Linux" in build_obj.os:
             build_obj.buildbin_result = "skipped"
-        if obj['retcode'] == -9: 
+        if obj['retcode'] == -9:
             build_obj.checksrc_result = "TIMEOUT"
 
     elif (obj['status'] == 'buildbin_complete'):
@@ -159,8 +160,10 @@ def handle_complete(obj, build_obj):
             build_obj.postprocessing_result = "skipped"
         build_obj.buildbin_result = result
         build_obj.buildbin_time = obj['elapsed_time']
-        if obj['retcode'] == -9: 
+        logging.debug("builder_id: %s Retcode: %s" % (obj['builder_id'], str(obj['retcode'])))
+        if obj['retcode'] == -9:
             build_obj.buildbin_result = "TIMEOUT"
+            build_obj.buildsrc_result = "TIMEOUT"
 
     elif (obj['status'] == 'post_processing_complete'):
         build_obj.postprocessing_result = result
