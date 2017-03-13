@@ -79,5 +79,7 @@ def overall_build_status(request, job_id):
         res = ', '.join(set(result))
     if len(build_statuses) == 0:
         res = "ABNORMAL"
+    if res == "skipped":
+        res = "OK"
     return render_to_response('overall_build_status.html', {"res": res},
         context_instance=RequestContext(request))
