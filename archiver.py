@@ -239,16 +239,23 @@ def handle_builder_event(obj):
             build_obj.save()
         elif (status == 'invalid_url'):
             build_obj.invalid_url = True
+            build_obj.buildsrc_result = 'skipped'
+            build_obj.checksrc_result = 'skipped'
+            build_obj.buildbin_result = 'skipped'
+            build_obj.postprocessing_result = 'skipped'
             build_obj.save()
-            job = build_obj.job
-            pkg = job.package
-            pkg.delete()
-            job.delete()
-            build_obj.delete()
+            #job = build_obj.job
+            #pkg = job.package
+            #pkg.delete()
+            #job.delete()
+            #build_obj.delete()
             return(1)
         elif (status == 'build_not_required'):
             build_obj.build_not_required = True
             build_obj.buildsrc_result = 'skipped'
+            build_obj.checksrc_result = 'skipped'
+            build_obj.buildbin_result = 'skipped'
+            build_obj.postprocessing_result = 'skipped'
             build_obj.preprocessing_message = "Build not required, versions identical in source and repository, and force not specified."
             build_obj.save()
         elif (status == 'build_failed'):
