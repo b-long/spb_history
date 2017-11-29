@@ -81,5 +81,7 @@ def overall_build_status(request, job_id):
         res = "ABNORMAL"
     if res == "skipped":
         res = "OK"
+    if res == "UNSUPPORTED":
+        res = "OK"
     return render_to_response('overall_build_status.html', {"res": res},
         context_instance=RequestContext(request))

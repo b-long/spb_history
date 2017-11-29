@@ -30,6 +30,7 @@ class Build(models.Model):
         ('WARNINGS', 'WARNINGS'),
         ('TIMEOUT', 'TIMEOUT'),
         ('IN_PROGRESS', 'IN_PROGRESS'),
+        ('UNSUPPORTED', 'UNSUPPORTED'),
         ('OK', 'OK'),
     )
     job = models.ForeignKey(Job)
