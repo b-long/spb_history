@@ -70,14 +70,14 @@
                     <td style="width: 110px;" align="left" class="status {{build.builder_id}} buildbin">
                         <span id="{{build.builder_id}}_buildbinstatus">
                             <a href="#{{build.builder_id}}_buildbin_anchor">
-                                <span id="{{build.builder_id}}_buildbin_event" class="moscato2_BUILDBIN_EVENT {{build.buildbin_result}}">&nbsp;&nbsp;{{build.buildbin_result}}&nbsp;&nbsp;</span>
+                                <span id="{{build.builder_id}}_buildbin_event" class="{{build.builder_id}}_BUILDBIN_EVENT {{build.buildbin_result}}">&nbsp;&nbsp;{{build.buildbin_result}}&nbsp;&nbsp;</span>
                             </a>
                         </span>
                     </td>
                     <td style="width: 140px;" align="left" class="status {{build.builder_id}} postprocessing">
                         <span id="{{build.builder_id}}_postprocessingstatus">
                             <a href="#{{build.builder_id}}_anchor">
-                                <span id="{{build.builder_id}}_postprocessing_event" class="moscato2_POSTPROCESSING_EVENT {{build.postprocessing_result}}">&nbsp;&nbsp;{{build.postprocessing_result}}&nbsp;&nbsp;</span>
+                                <span id="{{build.builder_id}}_postprocessing_event" class="{{build.builder_id}}_POSTPROCESSING_EVENT {{build.postprocessing_result}}">&nbsp;&nbsp;{{build.postprocessing_result}}&nbsp;&nbsp;</span>
                             </a>
                         </span>
                     </td>
@@ -137,7 +137,7 @@
                 				<h3>{{build.builder_id}} CHECK output</h3> 
                     			<p><a href="#top">[top]</a></p>
                 				<div class="{{build.builder_id}}" style="margin-left: 12px;"> 
-                					<pre id="moscato2_check_console" style="font-size: smaller; padding: 2px;">{{build.checking_message}}</pre>
+                					<pre id="{{build.builder_id}}_check_console" style="font-size: smaller; padding: 2px;">{{build.checking_message}}</pre>
                 				</div> 
 
                             <hr> 
