@@ -144,6 +144,13 @@ def handle_complete(obj, build_obj):
         if obj['retcode'] == -9:
             build_obj.buildsrc_result = "TIMEOUT"
 
+    elif (obj['status'] == 'unsupported'):
+        build_obj.buildsrc_result = "UNSUPPORTED"
+        build_obj.checksrc_result = "skipped"
+        build_obj.buildbin_result = "skipped"
+        build_obj.postprocessing_result = "skipped"
+        logging.debug("builder_id: %s Retcode: %s" % (obj['builder_id'], str(obj['retcode'])))
+                     
     elif (obj['status'] == 'check_complete'):
         build_obj.check_time = obj['elapsed_time']
         if result == "ERROR":
@@ -228,6 +235,7 @@ def handle_builder_event(obj):
             build_obj.buildbin_result = 'skipped'
             build_obj.save()
         elif (status in ['build_complete', 'check_complete',
+          'unsupported',
           'buildbin_complete', 'post_processing_complete']):
             handle_complete(obj, build_obj)
         elif (status == 'node_info'):
