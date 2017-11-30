@@ -208,6 +208,7 @@ def post_to_github(issue_number, package_name,
     logging.info("Post to github result: '{res}'".format(res = res))
     if 'skipped' in build_results:
         build_results.remove('skipped')
+    build_results = [br.replace("UNSUPPORTED", "OK") for br in build_results]
     labels = hub.repos("%s/labels" % issue_url).get()
     possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'ABNORMAL']
     existing_labels = [i['name'] for i in labels]
