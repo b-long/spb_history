@@ -132,9 +132,9 @@ Or it may mean that there is a problem with the build system itself.
 
         """ % problem
     msg = msg + """
-Please see the following build report for more details:
+Please see the [build report][1] for more details.
 
-%s
+[1]: %s
 
     """ % url
     return(msg)
