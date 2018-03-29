@@ -128,6 +128,8 @@ def handle_complete(obj, build_obj):
             result = "WARNINGS"
         else:
             result = "OK"
+    elif obj['retcode'] == -4:
+        result = "WARNINGS"
     else:
         result = "ERROR"
     logging.debug("handle_complete() status: %s; result: %s."
