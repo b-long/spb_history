@@ -145,6 +145,7 @@ def handle_complete(obj, build_obj):
         logging.debug("builder_id: %s Retcode: %s" % (obj['builder_id'], str(obj['retcode'])))
         if obj['retcode'] == -9:
             build_obj.buildsrc_result = "TIMEOUT"
+            build_obj.postprocessing_result = "skipped"
 
     elif (obj['status'] == 'unsupported'):
         build_obj.buildsrc_result = "UNSUPPORTED"
@@ -156,13 +157,15 @@ def handle_complete(obj, build_obj):
     elif (obj['status'] == 'check_complete'):
         build_obj.check_time = obj['elapsed_time']
         if result == "ERROR":
-            #build_obj.buildbin_result = "skipped"
+            build_obj.buildbin_result = "skipped"
             build_obj.postprocessing_result = "skipped"
         build_obj.checksrc_result = result
         if "Linux" in build_obj.os:
             build_obj.buildbin_result = "skipped"
+            build_obj.postprocessing_result = "skipped"
         if obj['retcode'] == -9:
             build_obj.checksrc_result = "TIMEOUT"
+            build_obj.postprocessing_result = "skipped"
 
     elif (obj['status'] == 'buildbin_complete'):
         if result == "ERROR":
@@ -173,6 +176,7 @@ def handle_complete(obj, build_obj):
         if obj['retcode'] == -9:
             build_obj.buildbin_result = "TIMEOUT"
             build_obj.buildsrc_result = "TIMEOUT"
+            build_obj.postprocessing_result = "skipped"
 
     elif (obj['status'] == 'post_processing_complete'):
         build_obj.postprocessing_result = result
