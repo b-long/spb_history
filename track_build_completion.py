@@ -360,6 +360,9 @@ class MyListener(stomp.ConnectionListener):
             logging.error("Received invalid JSON: %s." % e)
             return
 
+        # Acknowledge that the message has been processed
+        self.message_received = True
+
         try:
             # MTM FIXME: want to handle failure, but log traceback
             handle_builder_event(received_obj)
@@ -367,8 +370,6 @@ class MyListener(stomp.ConnectionListener):
             logging.error("failed to handle event: %s." % e)
             return
 
-        # Acknowledge that the message has been processed
-        self.message_received = True
 
 
 try:
