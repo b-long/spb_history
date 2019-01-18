@@ -359,9 +359,9 @@ class MyListener(stomp.ConnectionListener):
         except ValueError as e:
             logging.error("Received invalid JSON: %s." % e)
             return
-
-        # Acknowledge that the message has been processed
-        self.message_received = True
+        finally:
+            # Acknowledge that the message has been processed
+            self.message_received = True
 
         try:
             # MTM FIXME: want to handle failure, but log traceback
