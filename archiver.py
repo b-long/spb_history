@@ -350,12 +350,11 @@ class   MyListener(stomp.ConnectionListener):
             stomp.send(body=json.dumps(response),
                 destination="/topic/keepalive_response")
             return()
+
         debug_msg = {"script": os.path.basename(__file__),
             "host": socket.gethostname(), "timestamp":
-            datetime.now().isoformat(), "message":
-            "received message from %s" % headers['destination']}
-        stomp.send(body=json.dumps(debug_msg),
-            destination="/topic/keepalive_response")
+            datetime.now().isoformat()}
+
 
         # clean this log message up
         #logging.info("Received stomp message with body: {message}".format(message=body))
@@ -367,15 +366,19 @@ class   MyListener(stomp.ConnectionListener):
             msg = msg + "job_id: " + dic['job_id'] + " "
         if 'status' in dic:
             msg = msg + "status: " + dic['status'] + " "
+            debug_msg['status'] = dic['status']
         if 'sequence' in dic:
             msg = msg + "sequence: " + str(dic['sequence']) + " "
         if 'elapsed_time' in dic:
             msg = msg + "elapsed_time: " + str(dic['elapsed_time']) + " "
         if 'retcode' in dic:
             msg = msg + "retcode: " + str(dic['retcode']) + " "
-
+        if 'client_id' in dic:
+            debug_msg['issue'] = dic['client_id']
         logging.info("on message: " + msg)
 
+        stomp.send(body=json.dumps(debug_msg),
+            destination="/topic/keepalive_response")
 
         destination = headers.get('destination')
         logging.debug("Message is intended for destination: {dst}".format(dst = destination))

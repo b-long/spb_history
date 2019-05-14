@@ -316,6 +316,9 @@ class MyListener(stomp.ConnectionListener):
     def on_message(self, headers, body):
         logging.debug("Received stomp message: {message}".format(message=body))
         #logging.info("on_message() " + body)
+        debug_msg = {
+            "script": os.path.basename(__file__),
+            "host": socket.gethostname()}
         dic = json.loads(body)
         msg = ''
         if 'builder_id' in dic:
@@ -324,12 +327,15 @@ class MyListener(stomp.ConnectionListener):
             msg = msg + "job_id: " + dic['job_id'] + " "
         if 'status' in dic:
             msg = msg + "status: " + dic['status'] + " "
+            debug_msg['status'] = dic['status']
         if 'sequence' in dic:
             msg = msg + "sequence: " + str(dic['sequence']) + " "
         if 'elapsed_time' in dic:
             msg = msg + "elapsed_time: " + str(dic['elapsed_time']) + " "
         if 'retcode' in dic:
             msg = msg + "retcode: " + str(dic['retcode']) + " "
+        if 'client_id' in dic:
+            debug_msg['issue'] = dic['client_id']
 
 
         logging.info("on_message(): " + msg)
@@ -345,13 +351,10 @@ class MyListener(stomp.ConnectionListener):
                 destination="/topic/keepalive_response")
             return()
 
-        debug_msg = {
-            "script": os.path.basename(__file__),
-            "host": socket.gethostname(),
-            "message": "received message from %s, before thread" % headers['destination']
-        }
-        stomp.send(body=json.dumps(debug_msg),
-            destination="/topic/keepalive_response")
+# Already logged with archiver.py 
+# Activate this is debugging that archiver and track builds are in sync
+#        stomp.send(body=json.dumps(debug_msg),
+#            destination="/topic/keepalive_response")
 
         received_obj = None
         try:
