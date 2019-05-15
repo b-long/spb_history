@@ -362,6 +362,7 @@ class   MyListener(stomp.ConnectionListener):
         msg = ''
         if 'builder_id' in dic:
             msg = msg + "builder_id: " + dic['builder_id'] + " "
+            debug_msg['builder'] = dic['builder_id']
         if 'job_id' in dic:
             msg = msg + "job_id: " + dic['job_id'] + " "
         if 'status' in dic:
