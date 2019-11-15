@@ -15,7 +15,7 @@ import os
 import subprocess
 import socket
 import requests
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import stomp
 import uuid
 import mechanize
@@ -62,7 +62,7 @@ def handle_builder_event(obj):
 
 def handle_completed_build(obj):
     global tracker_base_url
-    if (obj.has_key('svn_url')):
+    if ('svn_url' in obj):
         if 'tracker.bioconductor.org' in obj['svn_url']:
             tracker_base_url = "https://tracker.bioconductor.org"
         else:
@@ -74,7 +74,7 @@ def handle_completed_build(obj):
     roundup_issue = segs[1]
     tarball_name = segs[2]
     staging_url = ENVIR['spb_staging_url']
-    f = urllib.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
+    f = urllib.request.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
     job_id = f.read().strip()
     if job_id == "0":
         logging.info("There is no build report for this job!")
@@ -91,7 +91,7 @@ def handle_completed_build(obj):
     html = filter_html(html)
     #logging.info("html after filtering: %s\n" % html)
 
-    f = urllib.urlopen("http://%s:8000/overall_build_status/%s"\
+    f = urllib.request.urlopen("http://%s:8000/overall_build_status/%s"\
         % (staging_url, job_id))
     result = f.read().strip().split(", ")
     url = copy_report_to_site(html, tarball_name)
@@ -173,9 +173,8 @@ def get_other_build_statuses(issue_number, hub, besides):
             ENVIR['github_issue_repo'], issue_number)).get()
     comments.reverse()
     me = hub.user().get()['login']
-    comments = filter(lambda x: x['user']['login'] == me, comments)
-    comments = filter(lambda x: x['body'].strip().startswith("Dear Package contributor"),
-      comments)
+    comments = [x for x in comments if x['user']['login'] == me]
+    comments = [x for x in comments if x['body'].strip().startswith("Dear Package contributor")]
     statuses = {}
     for comment in comments:
         url = filter(lambda x: "/spb_reports/" in x, comment['body'].split("\n"))[0]
@@ -192,7 +191,7 @@ def get_other_build_statuses(issue_number, hub, besides):
               comment['body'].split("\n"))[0]
             statuses[package] = re.sub(r'"|\.$', '',
               statline.split("were:")[-1].strip()).split(',')
-    flat = [item for sublist in statuses.values() for item in sublist]
+    flat = [item for sublist in list(statuses.values()) for item in sublist]
     return (list(set(flat)))
 
 def post_to_github(issue_number, package_name,

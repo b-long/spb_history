@@ -66,10 +66,10 @@ def overall_build_status(request, job_id):
             build_statuses.append(build.buildbin_result)
 
         build_statuses.append(build.postprocessing_result)
-    result = filter(lambda x: x != 'OK', build_statuses)
+    result = [x for x in build_statuses if x != 'OK']
     # sometimes there is an empty string in the result, not sure 
     # why. Should look into it more. Meantime let's just filter them out:
-    result = filter(lambda x: x != "", result)
+    result = [x for x in result if x != ""]
 
 
     #abnormal = filter(lambda x: x not in ["OK", "WARNINGS", "skipped"])

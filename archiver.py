@@ -100,12 +100,12 @@ def handle_first_message(obj, parent_job):
     return(build)
 
 def handle_phase_message(obj):
-    if obj.has_key('sequence'):
+    if 'sequence' in obj:
         sequence = obj['sequence']
     else:
         sequence = -1
 
-    if obj.has_key('retcode'):
+    if 'retcode' in obj:
         retcode = obj['retcode']
     else:
         retcode = -1
@@ -124,7 +124,7 @@ def get_build_obj(obj):
 def handle_complete(obj, build_obj):
 
     if obj['retcode'] == 0:
-        if obj.has_key("warnings") and obj['warnings'] == True:
+        if "warnings" in obj and obj['warnings'] == True:
             result = "WARNINGS"
         else:
             result = "OK"
@@ -187,7 +187,7 @@ def handle_builder_event(obj):
       "post_processing"]
     parent_job = None
     job_id = None
-    if (obj.has_key('job_id')):
+    if ('job_id' in obj):
         job_id = obj['job_id']
         try:
             logging.debug("Checking if job exists")
@@ -203,10 +203,10 @@ def handle_builder_event(obj):
         logging.warning("Malformed message, ignoring it.")
         return
     build_obj = None
-    if(obj.has_key('first_message') and obj['first_message'] == True):
+    if('first_message' in obj and obj['first_message'] == True):
         logging.debug("handle_builder_event() Handling first message.")
         build_obj = handle_first_message(obj, parent_job)
-    if (obj.has_key('status')):
+    if ('status' in obj):
         status = obj['status']
         sys.stdout.flush()
         try:
@@ -218,9 +218,9 @@ def handle_builder_event(obj):
             handle_dcf_info(obj, build_obj)
         elif (status in phases):
             if obj['status'] == 'post_processing':
-                if obj.has_key('build_product'):
+                if 'build_product' in obj:
                     build_obj.build_product = obj['build_product']
-                if obj.has_key('filesize'):
+                if 'filesize' in obj:
                     build_obj.filesize = obj['filesize']
                     build_obj.save()
                     return()
@@ -395,7 +395,7 @@ class   MyListener(stomp.ConnectionListener):
             logging.error("on_message() JSON is invalid: %s." % e)
             return
 
-        if ('job_id' in received_obj.keys()):
+        if ('job_id' in list(received_obj.keys())):
             if (destination == '/topic/buildjobs'):
                 handle_job_start(received_obj)
             elif (destination == '/topic/builderevents'):
