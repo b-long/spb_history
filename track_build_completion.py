@@ -2,11 +2,6 @@
 # package builder, and posts build reports to the
 # issue tracker when it detects a completed build.
 
-
-# FIXME - be aware that builds for different BioC versions
-# may be occuring and we need to be aware of them and be able
-# to tell them apart. Right now we're ignoring this.
-
 import sys
 import json
 import time
@@ -22,7 +17,7 @@ import mechanize
 import logging
 import warnings
 import re
-from octokit import Octokit
+from github import Github
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
@@ -79,22 +74,21 @@ def handle_completed_build(obj):
     if job_id == "0":
         logging.info("There is no build report for this job!")
         return
-    url = "http://%s:8000/job/%s/" % (staging_url, job_id)
-    logging.info("build report url: %s\n" %url)
+    url = "http://%s:8000/job/%s/" % (staging_url, job_id.decode())
+    logging.debug("build report url: %s\n" %url)
     sys.stdout.flush()
     logging.info("Sleeping for 30 seconds...\n")
     time.sleep(30)
 
     response = requests.get(url)
     html = response.text.encode('ascii', 'ignore')
-    #logging.info("html before filtering: %s\n" % html)
     html = filter_html(html)
-    #logging.info("html after filtering: %s\n" % html)
-
+    logging.debug("myf: http://%s:8000/overall_build_status/%s" % (staging_url, job_id.decode()))
     f = urllib.request.urlopen("http://%s:8000/overall_build_status/%s"\
-        % (staging_url, job_id))
-    result = f.read().strip().split(", ")
+        % (staging_url, job_id.decode()))
+    result = f.read().strip().decode().split(", ")
     url = copy_report_to_site(html, tarball_name)
+    logging.debug("myurl: %s" % url)
     post_text = get_post_text(result, url)
     if "github" in segs[0]:
         post_to_github(roundup_issue, tarball_name, html, post_text,
@@ -166,31 +160,27 @@ def copy_report_to_site(html, tarball_name):
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
 
-def get_other_build_statuses(issue_number, hub, besides):
+def get_other_build_statuses(issue, besides):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        comments = hub.repos("%s/issues/%s/comments" % (
-            ENVIR['github_issue_repo'], issue_number)).get()
-    comments.reverse()
-    me = hub.user().get()['login']
-    comments = [x for x in comments if x['user']['login'] == me]
-    comments = [x for x in comments if x['body'].strip().startswith("Dear Package contributor")]
+        comments = issue.get_comments()
+    comments = comments.reversed
+    bot = "bioc-issue-bot"
+    comments = [x for x in comments if x.user.login == bot]
+    comments = [x for x in comments if x.body.strip().startswith("Dear Package contributor")]
     statuses = {}
     for comment in comments:
-        url = filter(lambda x: "/spb_reports/" in x, comment['body'].split("\n"))[0]
+        url = list(filter(lambda x: "/spb_reports/" in x, comment.body.split("\n")))[0]
         package = re.sub(r'_$', '', url.split("/")[-1].split("buildreport")[0])
         if package in statuses:
             break
         if package == besides:
             continue
-        if "Congratulations!" in comment['body']:
+        if "Congratulations!" in comment.body:
             statuses[package] = ["OK"]
         else:
-            statline = filter(lambda x:
-              x.startswith("On one or more platforms, the build results were"),
-              comment['body'].split("\n"))[0]
-            statuses[package] = re.sub(r'"|\.$', '',
-              statline.split("were:")[-1].strip()).split(',')
+            statline = list(filter(lambda x: "On one or more platforms" in x, comment.body.split("\n")))[0]
+            statuses[package] = re.sub(r'"|\.$', '', statline.split("were:")[-1].strip()).split(', ')
     flat = [item for sublist in list(statuses.values()) for item in sublist]
     return (list(set(flat)))
 
@@ -198,19 +188,18 @@ def post_to_github(issue_number, package_name,
   html, post_text, build_results):
     issue_repos = ENVIR['github_issue_repo']
     token = ENVIR['github_token']
-    hub = Octokit(access_token=token)
-
+    gh = Github(login_or_token=token)
+    repo = gh.get_repo(issue_repos)
+    issue = repo.get_issue(number=int(issue_number))
     logging.info("Attempting to post to github at repos %s." % issue_repos)
-    issue_url = "%s/issues/%s" % (issue_repos, issue_number)
-    comments = hub.repos("%s/comments" % issue_url)
-    res = comments.post({"body": post_text})
-    logging.info("Post to github result: '{res}'".format(res = res))
+    issue.create_comment(post_text)
+    logging.info(build_results)
     if 'skipped' in build_results:
         build_results.remove('skipped')
     build_results = [br.replace("UNSUPPORTED", "OK") for br in build_results]
-    labels = hub.repos("%s/labels" % issue_url).get()
     possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'ABNORMAL']
-    existing_labels = [i['name'] for i in labels]
+    labels = issue.get_labels()
+    existing_labels = [i.name for i in labels]
 
     # At this point we want to add one or more labels to the issue to
     # capture the results of this build. But if there is more than one
@@ -222,18 +211,23 @@ def post_to_github(issue_number, package_name,
     # So, build_results currently contains the results for the
     # just-concluded build. Let's combine it with earlier results from
     # other packages in this issue:
-    build_results = build_results + get_other_build_statuses(issue_number, hub,
-      package_name)
+
+    build_results = build_results + get_other_build_statuses(issue,  package_name)
+
     # and uniquify it:
     build_results = list(set(build_results))
+    if 'skipped' in build_results:
+        build_results.remove('skipped')
+    build_results = [br.replace("UNSUPPORTED", "OK") for br in build_results]
+    logging.debug("All build results: %s" % build_results)
 
     for res in possible_build_results:
         if res in build_results:
             if not res in existing_labels:
-                hub.repos("%s/labels" % issue_url).post([res])
+                issue.add_to_labels(res)
         else:
             if res in existing_labels:
-                hub.repos("%s/labels/%s" % (issue_url, res)).delete()
+                issue.remove_from_labels(res)
 
 
 
@@ -264,7 +258,7 @@ def post_to_tracker(roundup_issue, tarball_name, \
     logging.info("Post to tracker result: '{res}'".format(res = res2))
 
 def filter_html(html):
-    lines = html.split("\n")
+    lines = html.decode().split("\n")
     good_lines = []
     for line in lines:
         if ("InstallCommand" in line):
