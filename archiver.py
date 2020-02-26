@@ -8,6 +8,9 @@ import socket
 import time
 import uuid
 from django.db import connection
+import django
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+django.setup()
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
 from bioconductor.communication import getNewStompConnection
@@ -23,15 +26,14 @@ segs = path.split("/")
 segs.pop()
 path =  "/".join(segs)
 sys.path.append(path)
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 # now you can do stuff like this:
 #from spb_history.viewhistory.models import Package
 #print Package.objects.count()
 
-from spb_history.viewhistory.models import Job
-from spb_history.viewhistory.models import Package
-from spb_history.viewhistory.models import Build
-from spb_history.viewhistory.models import Message
+from viewhistory.models import Job
+from viewhistory.models import Package
+from viewhistory.models import Build
+from viewhistory.models import Message
 
 def parse_time(time_str):
     """ take a string like 'Tue Nov 29 2011 11:55:40 GMT-0800 (PST)'
