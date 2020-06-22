@@ -24,6 +24,6 @@ set -o errexit
 set -o nounset
 
 echo "Now starting Django ..."
-python -m manage runserver 0.0.0.0:8000 >> django.log 2>&1 &
+python3 -m manage runserver 0.0.0.0:8000 >> django.log 2>&1 &
 echo "Django.py is running."
 echo "The log is available at '$(pwd)/django.log'"

@@ -2,7 +2,7 @@
 
 source env/bin/activate
 
-killall python
+killall python3
 
 ./run-django.sh
 ./run-archiver.sh

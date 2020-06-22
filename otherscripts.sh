@@ -2,4 +2,4 @@
 
 source env/bin/activate
 
-nohup python -m pinger.py >> pinger.log 2>&1 &
+nohup python3 -m pinger.py >> pinger.log 2>&1 &

@@ -22,6 +22,6 @@ set -o errexit
 set -o nounset
 
 echo "Now starting archiver.py ..."
-python -m archiver >> archiver.log 2>&1 &
+python3 -m archiver >> archiver.log 2>&1 &
 echo "archiver.py is started."
 echo "The log is available at '$(pwd)/archiver.log'"
