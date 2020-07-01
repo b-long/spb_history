@@ -29,10 +29,8 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)
                     level=logging.INFO)
 logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
-global tracker_base_url
 global build_counter
 build_counter = {}
-tracker_base_url = None
 
 def handle_builder_event(obj):
     global build_counter
@@ -56,14 +54,6 @@ def handle_builder_event(obj):
             handle_completed_build(obj)
 
 def handle_completed_build(obj):
-    global tracker_base_url
-    if ('svn_url' in obj):
-        if 'tracker.bioconductor.org' in obj['svn_url']:
-            tracker_base_url = "https://tracker.bioconductor.org"
-        else:
-            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
-    else:
-        tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
 
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
@@ -93,9 +83,6 @@ def handle_completed_build(obj):
     if "github" in segs[0]:
         post_to_github(roundup_issue, tarball_name, html, post_text,
             result)
-    else:
-        post_to_tracker(roundup_issue, tarball_name, html, \
-            post_text)
     logging.info("Done.\n")
     sys.stdout.flush()
 
@@ -228,34 +215,6 @@ def post_to_github(issue_number, package_name,
         else:
             if res in existing_labels:
                 issue.remove_from_labels(res)
-
-
-
-def post_to_tracker(roundup_issue, tarball_name, \
-  html, post_text):
-    global tracker_base_url
-    username = ENVIR['tracker_user']
-    password = ENVIR['tracker_pass']
-    url = tracker_base_url
-
-    logging.info("Attempting to post to tracker at url: '{url}'".format(url = url))
-
-    br = mechanize.Browser()
-    br.open(url)
-    br.select_form(nr=2)
-    br["__login_name"] = username
-    br["__login_password"] = password
-    res = br.submit()
-    logging.info("Login to tracker result: '{res}'".format(res = res))
-
-    url2 = url + "/issue%s" % roundup_issue
-
-    br.open(url2)
-    br.select_form(nr=2)
-    #br['@action'] = 'edit'
-    br['@note'] = post_text
-    res2 = br.submit()
-    logging.info("Post to tracker result: '{res}'".format(res = res2))
 
 def filter_html(html):
     lines = html.decode().split("\n")
