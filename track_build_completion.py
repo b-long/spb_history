@@ -113,7 +113,8 @@ Or it may mean that there is a problem with the build system itself.
 
         """ % problem
     msg = msg + """
-Please see the [build report][1] for more details.
+Please see the [build report][1] for more details. This link will be active
+for 21 days.
 
 [1]: %s
 
