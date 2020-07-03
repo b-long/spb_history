@@ -91,6 +91,7 @@ def get_post_text(build_result, url):
     if not build_result[0] == "OK":
         ok = False
     problem = ", ".join(build_result)
+    url2 = "https://bioconductor.org/developers/how-to/git/new-package-workflow/"
 
     msg = """
 Dear Package contributor,
@@ -116,9 +117,13 @@ Or it may mean that there is a problem with the build system itself.
 Please see the [build report][1] for more details. This link will be active
 for 21 days.
 
-[1]: %s
+Remember when making changes to your repository to push to git.bioconductor.org.
+A quick tutorial for setting up remotes and pushing to upstream can be found [here][2].
 
-    """ % url
+[1]: %s
+[2]: %s
+
+    """ % (url, url2)
     return(msg)
 
 
