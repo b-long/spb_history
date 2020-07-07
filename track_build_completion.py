@@ -117,7 +117,9 @@ Or it may mean that there is a problem with the build system itself.
 Please see the [build report][1] for more details. This link will be active
 for 21 days.
 
-Remember when making changes to your repository to push to git.bioconductor.org.
+Remember if you submitted your package after July 7th, 2020,
+when making changes to your repository push to
+git.bioconductor.org to trigger a new build.
 A quick tutorial for setting up remotes and pushing to upstream can be found [here][2].
 
 [1]: %s
@@ -309,7 +311,7 @@ class MyListener(stomp.ConnectionListener):
                 destination="/topic/keepalive_response")
             return()
 
-# Already logged with archiver.py 
+# Already logged with archiver.py
 # Activate this is debugging that archiver and track builds are in sync
 #        stomp.send(body=json.dumps(debug_msg),
 #            destination="/topic/keepalive_response")
