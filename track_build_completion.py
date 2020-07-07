@@ -79,14 +79,14 @@ def handle_completed_build(obj):
     result = f.read().strip().decode().split(", ")
     url = copy_report_to_site(html, tarball_name)
     logging.debug("myurl: %s" % url)
-    post_text = get_post_text(result, url)
+    post_text = get_post_text(result, url, tarball_name)
     if "github" in segs[0]:
         post_to_github(roundup_issue, tarball_name, html, post_text,
             result)
     logging.info("Done.\n")
     sys.stdout.flush()
 
-def get_post_text(build_result, url):
+def get_post_text(build_result, url, package_name):
     ok = True
     if not build_result[0] == "OK":
         ok = False
@@ -117,13 +117,15 @@ Or it may mean that there is a problem with the build system itself.
 Please see the [build report][1] for more details. This link will be active
 for 21 days.
 
-Remember when making changes to your repository to push to git.bioconductor.org.
+<strong> Remember: </strong>if you submitted your package after July 7th, 2020,
+when making changes to your repository push to
+`git@git.bioconductor.org:packages/%s` to trigger a new build.
 A quick tutorial for setting up remotes and pushing to upstream can be found [here][2].
 
 [1]: %s
 [2]: %s
 
-    """ % (url, url2)
+    """ % (package_name, url, url2)
     return(msg)
 
 
@@ -309,7 +311,7 @@ class MyListener(stomp.ConnectionListener):
                 destination="/topic/keepalive_response")
             return()
 
-# Already logged with archiver.py 
+# Already logged with archiver.py
 # Activate this is debugging that archiver and track builds are in sync
 #        stomp.send(body=json.dumps(debug_msg),
 #            destination="/topic/keepalive_response")
