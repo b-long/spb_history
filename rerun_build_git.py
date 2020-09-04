@@ -61,6 +61,11 @@ elif "https://github.com" in url.lower():
 if newpackage:
     pkgsrc = "github"
 
+
+if url.endswith(".git"):
+    url = url.replace(".git", "")
+
+
 obj['force']  = True
 obj['bioc_version'] = BIOC_VERSION
 obj['r_version'] = BIOC_R_MAP[BIOC_VERSION]
