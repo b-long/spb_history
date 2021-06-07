@@ -40,8 +40,11 @@ def filter_out_wrong_versions(builds, job):
 
     # FIXME get this info from a central source (config.yaml)
     if (r_ver == "4.1"):
-        if bioc_version == "3.13":
+        if bioc_version == "3.14":
             nodes = BUILD_NODES
+    if (r_ver == "4.1"):
+        if bioc_version == "3.13":
+            nodes = ["malbec2", "tokay2", "machv2"]
     if (r_ver == "4.0"):
         if bioc_version == "3.12":
             nodes = ["malbec1", "tokay1", "merida1"]
