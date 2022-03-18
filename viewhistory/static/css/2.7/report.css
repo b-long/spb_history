@@ -347,3 +347,14 @@ TABLE.mainrep .odd .riesling1 {
 TABLE.mainrep .even .riesling1 {
     background: #d9b3ff;
 }
+
+/* palamino3 */
+DIV.palamino3,
+TR.palamino3 TD,
+TABLE.mainrep .palamino3,
+TABLE.mainrep .odd .palamino3 {
+    background: #d9b3ff;
+}
+TABLE.mainrep .even .palamino3 {
+    background: #d9b3ff;
+}
