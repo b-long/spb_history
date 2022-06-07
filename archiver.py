@@ -119,6 +119,14 @@ def handle_phase_message(obj):
       body=obj['body'])
     msg.save()
 
+    if 'body' in obj:
+        body_str = str(obj['body'])
+    else:
+        body_str = ""
+
+    logging.info("on message(): builder_id: %s job_id: %s status: %s : %s" % (obj['builder_id'], obj['job_id'], obj['status'], body_str))
+
+
 def get_build_obj(obj):
     return(Build.objects.get(jid=obj['job_id'], builder_id=obj['builder_id']))
 
@@ -282,13 +290,14 @@ def handle_builder_event(obj):
             build_obj.save()
         elif (status in ['git_cmd', 'git_result','starting_check',
                          'Builder has been started', 'chmod_retcode',
-                         'starting_buildbin','normal_end','clear_check_console']):
+                         'starting_buildbin','normal_end','clear_check_console',
+                         'write_gitclone','r_check','bioc_check']):
             # temporarily manage 'status' messages not dealt with above
             # to avoid below info with whole object printed
             # TODO: consider specialized handling
-            logging.info("on message(): %s." % status)
+            logging.info("on message(): builder_id: %s status: %s received" % (obj['builder_id'], status))
         elif (status == 'Got Build Request'):
-            logging.info("on message(): Got Build Request")
+            logging.info("on message(): builder_id: %s Build Request Received" % obj['builder_id'])
         elif (status == 'autoexit'):
             logging.info("on message(): Done")
         else:
@@ -378,7 +387,7 @@ class   MyListener(stomp.ConnectionListener):
             msg = msg + "retcode: " + str(dic['retcode']) + " "
         if 'client_id' in dic:
             debug_msg['issue'] = dic['client_id']
-        logging.info("on message: " + msg)
+        logging.info("Incoming message(): " + msg)
 
         stomp.send(body=json.dumps(debug_msg),
             destination="/topic/keepalive_response")
