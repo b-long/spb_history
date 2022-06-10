@@ -358,3 +358,25 @@ TABLE.mainrep .odd .palomino3 {
 TABLE.mainrep .even .palomino3 {
     background: #d9b3ff;
 }
+
+/* palomino4 */
+DIV.palomino4,
+TR.palomino4 TD,
+TABLE.mainrep .palomino4,
+TABLE.mainrep .odd .palomino4 {
+    background: #d9b3ff;
+}
+TABLE.mainrep .even .palomino4 {
+    background: #d9b3ff;
+}
+
+/* lconway */
+DIV.lconway,
+TR.lconway TD,
+TABLE.mainrep .lconway,
+TABLE.mainrep .odd .lconway {
+    background: #ffccff;
+}
+TABLE.mainrep .even .lconway {
+    background: #ffccff;
+}
