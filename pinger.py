@@ -14,8 +14,8 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(message)s',
 logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
 class MyListener(ConnectionListener):
-    def on_message(self, headers, message):
-        logging.info(message)
+    def on_message(self, frame):
+        logging.info(frame.message)
 
 
 try:
