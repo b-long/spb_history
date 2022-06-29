@@ -153,4 +153,4 @@ TEMPLATES = [
     },
 ]
 
-ALLOWED_HOSTS = ["0.0.0.0", "localhost", "staging.bioconductor.org"]
+ALLOWED_HOSTS = ["0.0.0.0", "localhost", "staging.bioconductor.org", "52.4.245.79"]
