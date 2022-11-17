@@ -2,7 +2,7 @@
 
 from django.template import RequestContext
 #from django.http import HttpResponse
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from viewhistory.models import Package
 from viewhistory.models import Job
 from viewhistory.models import Build
@@ -12,15 +12,12 @@ from viewhistory import helper
 def index(request):
     ##packages = Package.objects.all().order_by('name')
     packages = Package.objects.all().extra(select={'lower_name': 'lower(name)'}).order_by('lower_name')
-    return render_to_response('index.html',
-      {'packages': packages}, context_instance=RequestContext(request))
+    return render(request, 'index.html', {'packages': packages})
 
 def jobs(request, package_id):
     p = Package.objects.get(pk=package_id)
     jobs = Job.objects.filter(package=p)#.order_by('id')
-    return render_to_response('jobs.html', {'jobs': jobs,
-      "package": jobs[0].package.name},
-      context_instance=RequestContext(request))
+    return render(request, 'jobs.html', {'jobs': jobs, "package": jobs[0].package.name})
       
 def job(request, job_id):
     job = Job.objects.get(pk=job_id)
@@ -30,13 +27,11 @@ def job(request, job_id):
     helper.get_messages(builds)
     for build in builds:
         build.builder_id = build.builder_id.replace(".", "_")
-    return render_to_response('job.html', {"job": job, "builds": builds},
-      context_instance=RequestContext(request))
+    return render(request, 'job.html', {"job": job, "builds": builds})
 
 def recent_builds(request):
     j = Job.objects.order_by("-time_started")[:20]
-    return render_to_response("recent_builds.html", 
-        {"recent_builds": j}, context_instance=RequestContext(request))
+    return render(request, "recent_builds.html", {"recent_builds": j})
 
 def jid(request, jid):
     b = Build.objects.filter(jid=jid)
@@ -44,8 +39,7 @@ def jid(request, jid):
         res = 0
     else:
         res = b[0].job.id
-    return render_to_response('jid.html', {"res": res},
-        context_instance=RequestContext(request))
+    return render(request, 'jid.html', {"res": res})
 
 
 def overall_build_status(request, job_id):
@@ -66,10 +60,10 @@ def overall_build_status(request, job_id):
             build_statuses.append(build.buildbin_result)
 
         build_statuses.append(build.postprocessing_result)
-    result = filter(lambda x: x != 'OK', build_statuses)
+    result = [x for x in build_statuses if x != 'OK']
     # sometimes there is an empty string in the result, not sure 
     # why. Should look into it more. Meantime let's just filter them out:
-    result = filter(lambda x: x != "", result)
+    result = [x for x in result if x != ""]
 
 
     #abnormal = filter(lambda x: x not in ["OK", "WARNINGS", "skipped"])
@@ -83,5 +77,4 @@ def overall_build_status(request, job_id):
         res = "OK"
     if res == "UNSUPPORTED":
         res = "OK"
-    return render_to_response('overall_build_status.html', {"res": res},
-        context_instance=RequestContext(request))
+    return render(request, 'overall_build_status.html', {"res": res})

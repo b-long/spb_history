@@ -8,5 +8,5 @@ path =  "/".join(segs)
 sys.path.append(path)
 os.environ['DJANGO_SETTINGS_MODULE'] = 'spb_history.settings'
 from spb_history.viewhistory.models import Package
-print Package.objects.count()
+print(Package.objects.count())
 

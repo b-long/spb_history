@@ -10,7 +10,7 @@ class Package(models.Model):
         return self.name
         
 class Job(models.Model):
-    package = models.ForeignKey(Package)
+    package = models.ForeignKey(Package, on_delete=models.DO_NOTHING)
     job_id = models.CharField(max_length=50) # unique for each job
     repository = models.CharField(max_length=20)
     r_version = models.CharField(max_length=10)
@@ -33,7 +33,7 @@ class Build(models.Model):
         ('UNSUPPORTED', 'UNSUPPORTED'),
         ('OK', 'OK'),
     )
-    job = models.ForeignKey(Job)
+    job = models.ForeignKey(Job, on_delete=models.DO_NOTHING)
     jid = models.CharField(max_length=100)
     builder_id = models.CharField(max_length=40)
     maintainer = models.CharField(max_length=255)
@@ -74,14 +74,14 @@ class Build(models.Model):
     
 
 class NodeInfo(models.Model):
-    builder_id = models.ForeignKey(Build)
+    builder_id = models.ForeignKey(Build, on_delete=models.DO_NOTHING)
     arch = models.CharField(max_length=20)
     r_version = models.CharField(max_length=50)
     platform = models.CharField(max_length=50)
     os = models.CharField(max_length=50)
 
 class Message(models.Model):
-    build = models.ForeignKey(Build)
+    build = models.ForeignKey(Build, on_delete=models.DO_NOTHING)
     build_phase = models.CharField(max_length=20)
     sequence = models.IntegerField()
     retcode = models.IntegerField()

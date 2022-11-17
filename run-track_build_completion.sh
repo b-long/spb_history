@@ -22,6 +22,6 @@ set -o errexit
 set -o nounset
 
 echo "Now starting track_build_completion.py ..."
-python -m track_build_completion >> track_build_completion.log 2>&1 &
+python3 -m track_build_completion >> track_build_completion.log 2>&1 &
 echo "track_build_completion.py is running."
 echo "The log is available at '$(pwd)/track_build_completion.log'"

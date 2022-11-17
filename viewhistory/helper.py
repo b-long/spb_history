@@ -39,29 +39,37 @@ def filter_out_wrong_versions(builds, job):
     nodes = []
 
     # FIXME get this info from a central source (config.yaml)
+    if (r_ver == "4.2"):
+        if bioc_version == "3.16":
+            nodes = BUILD_NODES
+    if (r_ver == "4.2"):
+        if bioc_version == "3.15":
+            nodes = ["nebbiolo1", "merida1"]
+    if (r_ver == "4.1"):
+        if bioc_version == "3.14":
+            nodes = ["nebbiolo2", "tokay2", "machv2"]
+    if (r_ver == "4.1"):
+        if bioc_version == "3.13":
+            nodes = ["malbec2", "tokay2", "machv2"]
     if (r_ver == "4.0"):
         if bioc_version == "3.12":
-	    nodes = BUILD_NODES
-    if (r_ver == "4.0"):
-        if bioc_version == "3.11":
-	    nodes = ["malbec2", "tokay2"]
+            nodes = ["malbec1", "tokay1", "merida1"]
+        elif bioc_version == "3.11":
+            nodes =  ["malbec2", "tokay2"]
     if (r_ver == "3.6"):
         if bioc_version == "3.10":
-	    nodes = ["malbec1", "tokay1", "merida1"]
-    if (r_ver == "3.6"):
-        if bioc_version == "3.9":
-	    nodes = ["malbec2", "tokay2", "celaya2"]
+            nodes = ["malbec1", "tokay1", "merida1"]
+        elif bioc_version == "3.9":
+            nodes = ["malbec2", "tokay2", "celaya2"]
     if (r_ver == "3.5"):
         if bioc_version == "3.8":
-	    nodes = ["malbec1", "tokay1", "merida1"]
-    if (r_ver == "3.5"):
-        if bioc_version == "3.7":
+            nodes = ["malbec1", "tokay1", "merida1"]
+        elif bioc_version == "3.7":
             nodes = ["malbec2", "tokay2", "merida2"]
     if (r_ver == "3.4"):
         if bioc_version == "3.6":
             nodes = ["malbec1", "tokay1", "veracruz1"]
-    if (r_ver == "3.4"):
-        if bioc_version == "3.5":
+        elif bioc_version == "3.5":
             nodes = ["malbec2", "tokay2", "toluca2", "veracruz2"]
     if (r_ver == "3.3"):
         if bioc_version == "3.4":

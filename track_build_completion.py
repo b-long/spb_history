@@ -2,11 +2,6 @@
 # package builder, and posts build reports to the
 # issue tracker when it detects a completed build.
 
-
-# FIXME - be aware that builds for different BioC versions
-# may be occuring and we need to be aware of them and be able
-# to tell them apart. Right now we're ignoring this.
-
 import sys
 import json
 import time
@@ -15,14 +10,14 @@ import os
 import subprocess
 import socket
 import requests
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import stomp
 import uuid
 import mechanize
 import logging
 import warnings
 import re
-from octokit import Octokit
+from github import Github
 
 # Modules created by Bioconductor
 from bioconductor.communication import getNewStompConnection
@@ -31,13 +26,11 @@ from bioconductor.config import ENVIR
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.INFO)
-logging.getLogger("stomp.py").setLevel(logging.WARNING)
+                    level=logging.DEBUG)
+logging.getLogger("stomp.py").setLevel(logging.DEBUG)
 
-global tracker_base_url
 global build_counter
 build_counter = {}
-tracker_base_url = None
 
 def handle_builder_event(obj):
     global build_counter
@@ -61,55 +54,44 @@ def handle_builder_event(obj):
             handle_completed_build(obj)
 
 def handle_completed_build(obj):
-    global tracker_base_url
-    if (obj.has_key('svn_url')):
-        if 'tracker.bioconductor.org' in obj['svn_url']:
-            tracker_base_url = "https://tracker.bioconductor.org"
-        else:
-            tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
-    else:
-        tracker_base_url = "http://tracker.fhcrc.org/roundup/bioc_submit"
 
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
     tarball_name = segs[2]
     staging_url = ENVIR['spb_staging_url']
-    f = urllib.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
+    f = urllib.request.urlopen("http://%s:8000/jid/%s" % (staging_url, obj['job_id']))
     job_id = f.read().strip()
     if job_id == "0":
         logging.info("There is no build report for this job!")
         return
-    url = "http://%s:8000/job/%s/" % (staging_url, job_id)
-    logging.info("build report url: %s\n" %url)
+    url = "http://%s:8000/job/%s/" % (staging_url, job_id.decode())
+    logging.debug("build report url: %s\n" %url)
     sys.stdout.flush()
     logging.info("Sleeping for 30 seconds...\n")
     time.sleep(30)
 
     response = requests.get(url)
     html = response.text.encode('ascii', 'ignore')
-    #logging.info("html before filtering: %s\n" % html)
     html = filter_html(html)
-    #logging.info("html after filtering: %s\n" % html)
-
-    f = urllib.urlopen("http://%s:8000/overall_build_status/%s"\
-        % (staging_url, job_id))
-    result = f.read().strip().split(", ")
+    logging.debug("myf: http://%s:8000/overall_build_status/%s" % (staging_url, job_id.decode()))
+    f = urllib.request.urlopen("http://%s:8000/overall_build_status/%s"\
+        % (staging_url, job_id.decode()))
+    result = f.read().strip().decode().split(", ")
     url = copy_report_to_site(html, tarball_name)
-    post_text = get_post_text(result, url)
+    logging.debug("myurl: %s" % url)
+    post_text = get_post_text(result, url, tarball_name)
     if "github" in segs[0]:
         post_to_github(roundup_issue, tarball_name, html, post_text,
             result)
-    else:
-        post_to_tracker(roundup_issue, tarball_name, html, \
-            post_text)
     logging.info("Done.\n")
     sys.stdout.flush()
 
-def get_post_text(build_result, url):
+def get_post_text(build_result, url, package_name):
     ok = True
     if not build_result[0] == "OK":
         ok = False
     problem = ", ".join(build_result)
+    url2 = "https://bioconductor.org/developers/how-to/git/new-package-workflow/"
 
     msg = """
 Dear Package contributor,
@@ -132,11 +114,18 @@ Or it may mean that there is a problem with the build system itself.
 
         """ % problem
     msg = msg + """
-Please see the [build report][1] for more details.
+Please see the [build report][1] for more details. This link will be active
+for 21 days.
+
+<strong> Remember: </strong>if you submitted your package after July 7th, 2020,
+when making changes to your repository push to
+`git@git.bioconductor.org:packages/%s` to trigger a new build.
+A quick tutorial for setting up remotes and pushing to upstream can be found [here][2].
 
 [1]: %s
+[2]: %s
 
-    """ % url
+    """ % (package_name, url, url2)
     return(msg)
 
 
@@ -166,52 +155,46 @@ def copy_report_to_site(html, tarball_name):
     url = "http://bioconductor.org/spb_reports/%s" % destfile
     return(url)
 
-def get_other_build_statuses(issue_number, hub, besides):
+def get_other_build_statuses(issue, besides):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        comments = hub.repos("%s/issues/%s/comments" % (
-            ENVIR['github_issue_repo'], issue_number)).get()
-    comments.reverse()
-    me = hub.user().get()['login']
-    comments = filter(lambda x: x['user']['login'] == me, comments)
-    comments = filter(lambda x: x['body'].strip().startswith("Dear Package contributor"),
-      comments)
+        comments = issue.get_comments()
+    comments = comments.reversed
+    bot = "bioc-issue-bot"
+    comments = [x for x in comments if x.user.login == bot]
+    comments = [x for x in comments if x.body.strip().startswith("Dear Package contributor")]
     statuses = {}
     for comment in comments:
-        url = filter(lambda x: "/spb_reports/" in x, comment['body'].split("\n"))[0]
+        url = list(filter(lambda x: "/spb_reports/" in x, comment.body.split("\n")))[0]
         package = re.sub(r'_$', '', url.split("/")[-1].split("buildreport")[0])
         if package in statuses:
             break
         if package == besides:
             continue
-        if "Congratulations!" in comment['body']:
+        if "Congratulations!" in comment.body:
             statuses[package] = ["OK"]
         else:
-            statline = filter(lambda x:
-              x.startswith("On one or more platforms, the build results were"),
-              comment['body'].split("\n"))[0]
-            statuses[package] = re.sub(r'"|\.$', '',
-              statline.split("were:")[-1].strip()).split(',')
-    flat = [item for sublist in statuses.values() for item in sublist]
+            statline = list(filter(lambda x: "On one or more platforms" in x, comment.body.split("\n")))[0]
+            statuses[package] = re.sub(r'"|\.$', '', statline.split("were:")[-1].strip()).split(', ')
+    flat = [item for sublist in list(statuses.values()) for item in sublist]
     return (list(set(flat)))
 
 def post_to_github(issue_number, package_name,
   html, post_text, build_results):
     issue_repos = ENVIR['github_issue_repo']
     token = ENVIR['github_token']
-    hub = Octokit(access_token=token)
-
+    gh = Github(login_or_token=token)
+    repo = gh.get_repo(issue_repos)
+    issue = repo.get_issue(number=int(issue_number))
     logging.info("Attempting to post to github at repos %s." % issue_repos)
-    issue_url = "%s/issues/%s" % (issue_repos, issue_number)
-    comments = hub.repos("%s/comments" % issue_url)
-    res = comments.post({"body": post_text})
-    logging.info("Post to github result: '{res}'".format(res = res))
+    issue.create_comment(post_text)
+    logging.info(build_results)
     if 'skipped' in build_results:
         build_results.remove('skipped')
     build_results = [br.replace("UNSUPPORTED", "OK") for br in build_results]
-    labels = hub.repos("%s/labels" % issue_url).get()
     possible_build_results = ['OK', 'WARNINGS', 'TIMEOUT', 'ERROR', 'ABNORMAL']
-    existing_labels = [i['name'] for i in labels]
+    labels = issue.get_labels()
+    existing_labels = [i.name for i in labels]
 
     # At this point we want to add one or more labels to the issue to
     # capture the results of this build. But if there is more than one
@@ -223,49 +206,26 @@ def post_to_github(issue_number, package_name,
     # So, build_results currently contains the results for the
     # just-concluded build. Let's combine it with earlier results from
     # other packages in this issue:
-    build_results = build_results + get_other_build_statuses(issue_number, hub,
-      package_name)
+
+    build_results = build_results + get_other_build_statuses(issue,  package_name)
+
     # and uniquify it:
     build_results = list(set(build_results))
+    if 'skipped' in build_results:
+        build_results.remove('skipped')
+    build_results = [br.replace("UNSUPPORTED", "OK") for br in build_results]
+    logging.debug("All build results: %s" % build_results)
 
     for res in possible_build_results:
         if res in build_results:
             if not res in existing_labels:
-                hub.repos("%s/labels" % issue_url).post([res])
+                issue.add_to_labels(res)
         else:
             if res in existing_labels:
-                hub.repos("%s/labels/%s" % (issue_url, res)).delete()
-
-
-
-def post_to_tracker(roundup_issue, tarball_name, \
-  html, post_text):
-    global tracker_base_url
-    username = ENVIR['tracker_user']
-    password = ENVIR['tracker_pass']
-    url = tracker_base_url
-
-    logging.info("Attempting to post to tracker at url: '{url}'".format(url = url))
-
-    br = mechanize.Browser()
-    br.open(url)
-    br.select_form(nr=2)
-    br["__login_name"] = username
-    br["__login_password"] = password
-    res = br.submit()
-    logging.info("Login to tracker result: '{res}'".format(res = res))
-
-    url2 = url + "/issue%s" % roundup_issue
-
-    br.open(url2)
-    br.select_form(nr=2)
-    #br['@action'] = 'edit'
-    br['@note'] = post_text
-    res2 = br.submit()
-    logging.info("Post to tracker result: '{res}'".format(res = res2))
+                issue.remove_from_labels(res)
 
 def filter_html(html):
-    lines = html.split("\n")
+    lines = html.decode().split("\n")
     good_lines = []
     for line in lines:
         if ("InstallCommand" in line):
@@ -287,8 +247,8 @@ class MyListener(stomp.ConnectionListener):
     def on_connecting(self, host_and_port):
         logging.debug('on_connecting() %s %s.' % host_and_port)
 
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
+    def on_connected(self, frame):
+        logging.debug('on_connected() %s %s.' % (frame.headers, frame.body))
 
     def on_disconnected(self):
         logging.debug('on_disconnected().')
@@ -296,12 +256,12 @@ class MyListener(stomp.ConnectionListener):
     def on_heartbeat_timeout(self):
         logging.debug('on_heartbeat_timeout().')
 
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
+    def on_before_message(self, frame):
+        logging.debug('on_before_message() %s .' % frame)
+        return frame
 
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
+    def on_receipt(self, frame):
+        logging.debug('on_receipt() %s %s.' % (frame.headers, frame.body))
 
     def on_send(self, frame):
         logging.debug('on_send() %s %s %s.' %
@@ -310,10 +270,12 @@ class MyListener(stomp.ConnectionListener):
     def on_heartbeat(self):
         logging.info('on_heartbeat(): Waiting to do work.')
 
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
+    def on_error(self, frame):
+        logging.debug('on_error(): "%s".' % frame.message)
 
-    def on_message(self, headers, body):
+    def on_message(self, frame):
+        headers = frame.headers
+        body = frame.body
         logging.debug("Received stomp message: {message}".format(message=body))
         #logging.info("on_message() " + body)
         debug_msg = {
@@ -351,7 +313,7 @@ class MyListener(stomp.ConnectionListener):
                 destination="/topic/keepalive_response")
             return()
 
-# Already logged with archiver.py 
+# Already logged with archiver.py
 # Activate this is debugging that archiver and track builds are in sync
 #        stomp.send(body=json.dumps(debug_msg),
 #            destination="/topic/keepalive_response")

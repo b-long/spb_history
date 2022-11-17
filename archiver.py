@@ -8,14 +8,17 @@ import socket
 import time
 import uuid
 from django.db import connection
+import django
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+django.setup()
 # Modules created by Bioconductor
 from bioconductor.config import BIOC_R_MAP
 from bioconductor.communication import getNewStompConnection
 
 logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
-                    level=logging.INFO)
-logging.getLogger("stomp.py").setLevel(logging.WARNING)
+                    level=logging.DEBUG)
+logging.getLogger("stomp.py").setLevel(logging.DEBUG)
 
 # set up django environment
 path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -23,15 +26,14 @@ segs = path.split("/")
 segs.pop()
 path =  "/".join(segs)
 sys.path.append(path)
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 # now you can do stuff like this:
 #from spb_history.viewhistory.models import Package
 #print Package.objects.count()
 
-from spb_history.viewhistory.models import Job
-from spb_history.viewhistory.models import Package
-from spb_history.viewhistory.models import Build
-from spb_history.viewhistory.models import Message
+from viewhistory.models import Job
+from viewhistory.models import Package
+from viewhistory.models import Build
+from viewhistory.models import Message
 
 def parse_time(time_str):
     """ take a string like 'Tue Nov 29 2011 11:55:40 GMT-0800 (PST)'
@@ -100,12 +102,12 @@ def handle_first_message(obj, parent_job):
     return(build)
 
 def handle_phase_message(obj):
-    if obj.has_key('sequence'):
+    if 'sequence' in obj:
         sequence = obj['sequence']
     else:
         sequence = -1
 
-    if obj.has_key('retcode'):
+    if 'retcode' in obj:
         retcode = obj['retcode']
     else:
         retcode = -1
@@ -117,6 +119,14 @@ def handle_phase_message(obj):
       body=obj['body'])
     msg.save()
 
+    if 'body' in obj:
+        body_str = str(obj['body'])
+    else:
+        body_str = ""
+
+    logging.info("on message(): builder_id: %s job_id: %s status: %s : %s" % (obj['builder_id'], obj['job_id'], obj['status'], body_str))
+
+
 def get_build_obj(obj):
     return(Build.objects.get(jid=obj['job_id'], builder_id=obj['builder_id']))
 
@@ -124,7 +134,7 @@ def get_build_obj(obj):
 def handle_complete(obj, build_obj):
 
     if obj['retcode'] == 0:
-        if obj.has_key("warnings") and obj['warnings'] == True:
+        if "warnings" in obj and obj['warnings'] == True:
             result = "WARNINGS"
         else:
             result = "OK"
@@ -187,7 +197,7 @@ def handle_builder_event(obj):
       "post_processing"]
     parent_job = None
     job_id = None
-    if (obj.has_key('job_id')):
+    if ('job_id' in obj):
         job_id = obj['job_id']
         try:
             logging.debug("Checking if job exists")
@@ -203,10 +213,10 @@ def handle_builder_event(obj):
         logging.warning("Malformed message, ignoring it.")
         return
     build_obj = None
-    if(obj.has_key('first_message') and obj['first_message'] == True):
+    if('first_message' in obj and obj['first_message'] == True):
         logging.debug("handle_builder_event() Handling first message.")
         build_obj = handle_first_message(obj, parent_job)
-    if (obj.has_key('status')):
+    if ('status' in obj):
         status = obj['status']
         sys.stdout.flush()
         try:
@@ -218,9 +228,9 @@ def handle_builder_event(obj):
             handle_dcf_info(obj, build_obj)
         elif (status in phases):
             if obj['status'] == 'post_processing':
-                if obj.has_key('build_product'):
+                if 'build_product' in obj:
                     build_obj.build_product = obj['build_product']
-                if obj.has_key('filesize'):
+                if 'filesize' in obj:
                     build_obj.filesize = obj['filesize']
                     build_obj.save()
                     return()
@@ -280,13 +290,14 @@ def handle_builder_event(obj):
             build_obj.save()
         elif (status in ['git_cmd', 'git_result','starting_check',
                          'Builder has been started', 'chmod_retcode',
-                         'starting_buildbin','normal_end','clear_check_console']):
+                         'starting_buildbin','normal_end','clear_check_console',
+                         'write_gitclone','r_check','bioc_check']):
             # temporarily manage 'status' messages not dealt with above
             # to avoid below info with whole object printed
             # TODO: consider specialized handling
-            logging.info("on message(): %s." % status)
+            logging.info("on message(): builder_id: %s status: %s received" % (obj['builder_id'], status))
         elif (status == 'Got Build Request'):
-            logging.info("on message(): Got Build Request")
+            logging.info("on message(): builder_id: %s Build Request Received" % obj['builder_id'])
         elif (status == 'autoexit'):
             logging.info("on message(): Done")
         else:
@@ -315,8 +326,8 @@ class   MyListener(stomp.ConnectionListener):
     def on_connecting(self, host_and_port):
         logging.debug('on_connecting() %s %s.' % host_and_port)
 
-    def on_connected(self, headers, body):
-        logging.debug('on_connected() %s %s.' % (headers, body))
+    def on_connected(self, frame):
+        logging.debug('on_connected() %s %s.' % (frame.headers, frame.body))
 
     def on_disconnected(self):
         logging.debug('on_disconnected().')
@@ -324,12 +335,12 @@ class   MyListener(stomp.ConnectionListener):
     def on_heartbeat_timeout(self):
         logging.debug('on_heartbeat_timeout().')
 
-    def on_before_message(self, headers, body):
-        logging.debug('on_before_message() %s %s.' % (headers, body))
-        return headers, body
+    def on_before_message(self, frame):
+        logging.debug('on_before_message() %s .' % frame)
+        return frame
 
-    def on_receipt(self, headers, body):
-        logging.debug('on_receipt() %s %s.' % (headers, body))
+    def on_receipt(self, frame):
+        logging.debug('on_receipt() %s %s.' % (frame.headers, frame.body))
 
     def on_send(self, frame):
         logging.debug('on_send() %s %s %s.' %
@@ -338,10 +349,12 @@ class   MyListener(stomp.ConnectionListener):
     def on_heartbeat(self):
         logging.info('on_heartbeat(): Waiting to do work.')
 
-    def on_error(self, headers, message):
-        logging.debug('on_error(): "%s".' % message)
+    def on_error(self, frame):
+        logging.debug('on_error(): "%s".' % frame.message)
 
-    def on_message(self, headers, body):
+    def on_message(self, frame):
+        headers = frame.headers
+        body = frame.body
         # FIXME, don't hardcode keepalive topic name:
         if headers['destination'] == '/topic/keepalive':
             logging.debug('got keepalive message')
@@ -376,7 +389,7 @@ class   MyListener(stomp.ConnectionListener):
             msg = msg + "retcode: " + str(dic['retcode']) + " "
         if 'client_id' in dic:
             debug_msg['issue'] = dic['client_id']
-        logging.info("on message: " + msg)
+        logging.info("Incoming message(): " + msg)
 
         stomp.send(body=json.dumps(debug_msg),
             destination="/topic/keepalive_response")
@@ -395,7 +408,7 @@ class   MyListener(stomp.ConnectionListener):
             logging.error("on_message() JSON is invalid: %s." % e)
             return
 
-        if ('job_id' in received_obj.keys()):
+        if ('job_id' in list(received_obj.keys())):
             if (destination == '/topic/buildjobs'):
                 handle_job_start(received_obj)
             elif (destination == '/topic/builderevents'):
