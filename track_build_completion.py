@@ -29,6 +29,22 @@ logging.basicConfig(format='%(levelname)s: %(asctime)s %(filename)s - %(message)
                     level=logging.DEBUG)
 logging.getLogger("stomp.py").setLevel(logging.DEBUG)
 
+# set up django environment
+from django.db import connection
+import django
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+django.setup()
+path = os.path.abspath(os.path.dirname(sys.argv[0]))
+segs = path.split("/")
+segs.pop()
+path =  "/".join(segs)
+sys.path.append(path)
+from viewhistory.models import Job
+from viewhistory.models import Package
+from viewhistory.models import Build
+from viewhistory.models import Message
+
+
 global build_counter
 build_counter = {}
 
@@ -55,6 +71,7 @@ def handle_builder_event(obj):
 
 def handle_completed_build(obj):
 
+    logging.debug(obj)
     segs = obj['client_id'].split(":")
     roundup_issue = segs[1]
     tarball_name = segs[2]
@@ -79,26 +96,30 @@ def handle_completed_build(obj):
     result = f.read().strip().decode().split(", ")
     url = copy_report_to_site(html, tarball_name)
     logging.debug("myurl: %s" % url)
-    post_text = get_post_text(result, url, tarball_name)
+
+    build_obj = Build.objects.filter(jid=obj['job_id'])
+
+    post_text = get_post_text(result, url, tarball_name, build_obj)
+    logging.debug("Printing Message: \n" + post_text)
     if "github" in segs[0]:
         post_to_github(roundup_issue, tarball_name, html, post_text,
             result)
     logging.info("Done.\n")
     sys.stdout.flush()
 
-def get_post_text(build_result, url, package_name):
+def get_post_text(build_result, url, package_name, build_obj):
     ok = True
     if not build_result[0] == "OK":
         ok = False
     problem = ", ".join(build_result)
-    url2 = "https://bioconductor.org/developers/how-to/git/new-package-workflow/"
+    url2 = "https://contributions.bioconductor.org/git-version-control.html#new-package-workflow"
 
     msg = """
 Dear Package contributor,
 
 This is the automated single package builder at bioconductor.org.
 
-Your package has been built on Linux, Mac, and Windows.
+Your package has been built on the Bioconductor Build System.
 
     """
     if ok:
@@ -114,8 +135,25 @@ Or it may mean that there is a problem with the build system itself.
 
         """ % problem
     msg = msg + """
-Please see the [build report][1] for more details. This link will be active
-for 21 days.
+Please see the [build report][1] for more details.
+"""
+    msg2 = get_build_products_message(build_obj)
+    if (not (msg2 == "")):
+        msg = msg + """
+
+The following are build products from R CMD build on the Bioconductor Build
+System: \n %s
+        """ % (msg2)
+    else:
+        msg = msg + """
+
+The following are build products from R CMD build on the Bioconductor Build
+System: \n ERROR before build products produced.
+        """
+
+    msg = msg + """
+
+Links above active for 21 days.
 
 <strong> Remember: </strong>if you submitted your package after July 7th, 2020,
 when making changes to your repository push to
@@ -126,6 +164,18 @@ A quick tutorial for setting up remotes and pushing to upstream can be found [he
 [2]: %s
 
     """ % (package_name, url, url2)
+    return(msg)
+
+
+def get_build_products_message(build_obj):
+    msg = ""
+    baseurl = "https://bioconductor.org/spb_reports/"
+    for i in build_obj:
+        os = i.os
+        build_product = i.build_product
+        if (not (build_product == "")):
+            link_txt = "[" + build_product + "](" + baseurl + build_product + ")"
+            msg = msg + os + ": " + link_txt + "\n"
     return(msg)
 
 
