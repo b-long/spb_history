@@ -215,7 +215,7 @@ def get_other_build_statuses(issue, besides):
     comments = [x for x in comments if x.body.strip().startswith("Dear Package contributor")]
     statuses = {}
     for comment in comments:
-        url = list(filter(lambda x: "/spb_reports/" in x, comment.body.split("\n")))[0]
+        url = list(filter(lambda x: "/spb_reports/" in x and "buildreport" in x, comment.body.split("\n")))[0]
         package = re.sub(r'_$', '', url.split("/")[-1].split("buildreport")[0])
         if package in statuses:
             break
