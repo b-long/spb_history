@@ -230,6 +230,7 @@ def handle_builder_event(obj):
             if obj['status'] == 'post_processing':
                 if 'build_product' in obj:
                     build_obj.build_product = obj['build_product']
+                    build_obj.save()
                 if 'filesize' in obj:
                     build_obj.filesize = obj['filesize']
                     build_obj.save()
