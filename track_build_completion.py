@@ -119,7 +119,7 @@ Dear Package contributor,
 
 This is the automated single package builder at bioconductor.org.
 
-Your package has been built on the Bioconductor Build System.
+Your package has been built on the Bioconductor Single Package Builder.
 
     """
     if ok:
@@ -141,14 +141,12 @@ Please see the [build report][1] for more details.
     if (not (msg2 == "")):
         msg = msg + """
 
-The following are build products from R CMD build on the Bioconductor Build
-System: \n %s
+The following are build products from R CMD build on the Single Package Builder: \n %s
         """ % (msg2)
     else:
         msg = msg + """
 
-The following are build products from R CMD build on the Bioconductor Build
-System: \n ERROR before build products produced.
+The following are build products from R CMD build on the Single Package Builder: \n ERROR before build products produced.
         """
 
     msg = msg + """
