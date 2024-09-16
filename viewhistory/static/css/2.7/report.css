@@ -337,6 +337,17 @@ TABLE.mainrep .even .nebbiolo1 {
     background: #b3e0ff;
 }
 
+/* teran2 */
+DIV.teran2,
+TR.teran2 TD,
+TABLE.mainrep .teran2,
+TABLE.mainrep .odd .teran2 {
+    background: #b3e0ff;
+}
+TABLE.mainrep .even .teran2 {
+    background: #b3e0ff;
+}
+
 /* riesling1 */
 DIV.riesling1,
 TR.riesling1 TD,
